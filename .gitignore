@@ -1,0 +1,31 @@
+# ===== Артефакты сборки C++ =====
+*.o
+*.obj
+*.exe
+*.out
+*.app
+*.ilk
+*.pdb
+*.idb
+*.lib
+*.a
+*.so
+*.dll
+*.dylib
+build/
+cmake-build-*/
+bin/
+obj/
+
+# ===== VS Code =====
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# ===== Системные / служебные =====
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
