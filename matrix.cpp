@@ -146,6 +146,80 @@ Matrix Matrix::numberMultiply(int number) const {
     return result;
 }
 
+Matrix Matrix::operator+(const Matrix& other) const {
+    return summary(other);
+}
+
+Matrix operator-(const Matrix& leftMatrix, const Matrix& rightMatrix) {
+    if (leftMatrix.dimension != rightMatrix.dimension) {
+        throw std::invalid_argument("operator-: different matrix dimensions");
+    }
+    Matrix result(leftMatrix.dimension);
+    for (int i = 0; i < leftMatrix.dimension * leftMatrix.dimension; ++i) {
+        result.elements[i] = leftMatrix.elements[i] - rightMatrix.elements[i];
+    }
+    return result;
+}
+
+int* Matrix::operator[](int row) {
+    if (row < 0 || row >= dimension) {
+        throw std::out_of_range("operator[]: row index out of range");
+    }
+    return elements + row * dimension;
+}
+
+const int* Matrix::operator[](int row) const {
+    if (row < 0 || row >= dimension) {
+        throw std::out_of_range("operator[]: row index out of range");
+    }
+    return elements + row * dimension;
+}
+
+int Matrix::operator()() const {
+    if (dimension == 0) {
+        throw std::invalid_argument("determinant: empty matrix");
+    }
+    const int n = dimension;
+    long long* a = new long long[n * n];
+    for (int i = 0; i < n * n; ++i) {
+        a[i] = elements[i];
+    }
+    long long prev = 1;
+    int sign = 1;
+    for (int k = 0; k < n - 1; ++k) {
+        if (a[indexOf(k, k, n)] == 0) {
+            int swapRow = -1;
+            for (int i = k + 1; i < n; ++i) {
+                if (a[indexOf(i, k, n)] != 0) {
+                    swapRow = i;
+                    break;
+                }
+            }
+            if (swapRow == -1) {
+                delete[] a;
+                return 0;
+            }
+            for (int j = 0; j < n; ++j) {
+                long long tmp = a[indexOf(k, j, n)];
+                a[indexOf(k, j, n)] = a[indexOf(swapRow, j, n)];
+                a[indexOf(swapRow, j, n)] = tmp;
+            }
+            sign = -sign;
+        }
+        for (int i = k + 1; i < n; ++i) {
+            for (int j = k + 1; j < n; ++j) {
+                a[indexOf(i, j, n)] =
+                    (a[indexOf(i, j, n)] * a[indexOf(k, k, n)] -
+                     a[indexOf(i, k, n)] * a[indexOf(k, j, n)]) / prev;
+            }
+        }
+        prev = a[indexOf(k, k, n)];
+    }
+    long long det = sign * a[indexOf(n - 1, n - 1, n)];
+    delete[] a;
+    return static_cast<int>(det);
+}
+
 bool operator==(const Matrix& leftMatrix, const Matrix& rightMatrix) {
     if (leftMatrix.getDimension() != rightMatrix.getDimension()) return false;
     const int n = leftMatrix.getDimension();

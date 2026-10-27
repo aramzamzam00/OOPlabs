@@ -31,6 +31,16 @@ class Matrix {
         Matrix numberMultiply(int number) const;
         char* toString() const;
 
+        //Лаба 2
+        Matrix operator+(const Matrix& other) const;
+        friend Matrix operator-(const Matrix& leftMatrix, const Matrix& rightMatrix);
+        
+        int* operator[](int row);
+        const int* operator[](int row) const;
+        
+        int operator()() const;
+
+
     private:
         int dimension;
         int* elements;

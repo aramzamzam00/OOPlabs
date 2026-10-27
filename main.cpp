@@ -1,40 +1,39 @@
 #include <iostream>
 
-#include <gtest/gtest.h>
-
 #include "Matrix.h"
 
-int main(int argc, char** argv) {
+int main() {
     static const int data[4] = {1, 2, 3, 4};
     static const int dataB[4] = {4, 3, 2, 1};
+    static const int data3[9] = {2, 0, 1, 1, 3, 2, 3, 1, 4};
 
-    Matrix empty;
-    Matrix zero(2);
-    std::cout << "empty dim: " << empty.getDimension() << "\n";
-    std::cout << "empty matrix \n" << zero << "\n";
+    Matrix a(2, data);
+    Matrix b(2, dataB);
 
-    Matrix filled(2, data);
-    Matrix k(2, dataB);
+    std::cout << "a:\n" << a;
+    std::cout << "\nb:\n" << b;
 
-    char* str = filled.toString();
+    std::cout << "\na + b:\n" << a + b;
+    std::cout << "\na - b:\n" << a - b;
 
+    std::cout << "\na[0][1]: " << a[0][1] << "\n";
 
-    std::cout << "filled:\n" << filled;
-    std::cout << "\ntoString:\n" << str << "\n";
-    std::cout << "\nget(1,0): " << filled.getElement(1, 0)
-              << ", flat[0]: " << filled.getElements()[0]
-              << ", dim: " << filled.getDimension() << "\n";
+    Matrix c = a;
+    c[1][0] = 9;
+    std::cout << "\nc = a, then c[1][0] = 9:\n" << c;
+    std::cout << "\na unchanged:\n" << a;
 
-    std::cout << "\nsetElement(0,0,9):\n" << filled.setElement(0, 0, 9);
-    std::cout << "\nsetElements:\n"     << filled.setElements(dataB);
-    std::cout << "\nsetDimension(3):\n" << filled.setDimension(3);
+    std::cout << "\na() (determinant): " << a() << "\n";
 
-    std::cout << "\ntransposition:\n"  << filled.transposition();
-    std::cout << "\nsummary:\n"        << filled.summary(k);
-    std::cout << "\nmatrixMultiply:\n" << filled.matrixMultiply(k);
-    std::cout << "\nnumberMultiply:\n" << filled.numberMultiply(3);
+    Matrix s(3, data3);
+    std::cout << "\ns (3x3):\n" << s;
+    std::cout << "\ns() (determinant): " << s() << "\n";
 
-    std::cout << "\n--- running tests ---\n\n";
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
+    Matrix d(2, dataB);
+    d = a;
+    d[0][0] = 100;
+    std::cout << "\nd = a, then d[0][0] = 100:\n" << d;
+    std::cout << "\na unchanged:\n" << a;
+
+    return 0;
 }
