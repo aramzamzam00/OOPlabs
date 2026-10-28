@@ -29,3 +29,8 @@ obj/
 Thumbs.db
 *.log
 *.tmp
+build_log.txt
+matrices.txt
+matrices.bin
+matrix_lab3_text_test.txt
+matrix_lab3_bin_test.bin
