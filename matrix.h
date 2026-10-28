@@ -40,6 +40,9 @@ class Matrix {
         
         int operator()() const;
 
+        //Лаба 3
+        void saveBinary(std::ostream& ostream) const;
+        void loadBinary(std::istream& istream);
 
     private:
         int dimension;
@@ -49,3 +52,4 @@ class Matrix {
 bool operator==(const Matrix& leftMatrix, const Matrix& rightMatrix);
 bool operator!=(const Matrix& leftMatrix, const Matrix& rightMatrix);
 std::ostream& operator<<(std::ostream& ostream, const Matrix& matrix);
+std::istream& operator>>(std::istream& istream, Matrix& matrix);

@@ -220,6 +220,35 @@ int Matrix::operator()() const {
     return static_cast<int>(det);
 }
 
+void Matrix::saveBinary(std::ostream& ostream) const {
+    ostream.write(reinterpret_cast<const char*>(&dimension), sizeof(dimension));
+    if (dimension > 0) {
+        ostream.write(reinterpret_cast<const char*>(elements),
+                      sizeof(int) * dimension * dimension);
+    }
+}
+
+void Matrix::loadBinary(std::istream& istream) {
+    int dimension = 0;
+    istream.read(reinterpret_cast<char*>(&dimension), sizeof(dimension));
+    if (!istream) {
+        return;
+    }
+    if (dimension < 0) {
+        istream.setstate(std::ios_base::failbit);
+        return;
+    }
+    int* buffer = new int[dimension * dimension];
+    if (dimension > 0) {
+        istream.read(reinterpret_cast<char*>(buffer),
+                     sizeof(int) * dimension * dimension);
+    }
+    if (istream) {
+        *this = Matrix(dimension, buffer);
+    }
+    delete[] buffer;
+}
+
 bool operator==(const Matrix& leftMatrix, const Matrix& rightMatrix) {
     if (leftMatrix.getDimension() != rightMatrix.getDimension()) return false;
     const int n = leftMatrix.getDimension();
@@ -236,14 +265,39 @@ bool operator!=(const Matrix& leftMatrix, const Matrix& rightMatrix) {
 
 std::ostream& operator<<(std::ostream& ostream, const Matrix& matrix) {
     const int n = matrix.getDimension();
+    ostream << n << '\n';
     for (int i = 0; i < n; ++i) {
         for (int j = 0; j < n; ++j) {
             ostream << matrix.getElement(i, j);
             if (j + 1 < n) ostream << '\t';
         }
-        if (i + 1 < n) ostream << '\n';
+        ostream << '\n';
     }
     return ostream;
+}
+
+std::istream& operator>>(std::istream& istream, Matrix& matrix) {
+    int dimension = 0;
+    if (!(istream >> dimension)) {
+        return istream;
+    }
+    if (dimension < 0) {
+        istream.setstate(std::ios_base::failbit);
+        return istream;
+    }
+    int* buffer = new int[dimension * dimension];
+    bool loaded = true;
+    for (int i = 0; i < dimension * dimension; ++i) {
+        if (!(istream >> buffer[i])) {
+            loaded = false;
+            break;
+        }
+    }
+    if (loaded) {
+        matrix = Matrix(dimension, buffer);
+    }
+    delete[] buffer;
+    return istream;
 }
 
 char* Matrix::toString() const {

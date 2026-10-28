@@ -2,6 +2,9 @@
 #include <gtest/gtest.h>
 #include "Matrix.h"
 #include <cstring>
+#include <sstream>
+#include <fstream>
+#include <cstdio>
 
 TEST(MatrixTestsLab1, DefaultConstructorCreatesEmptyMatrix) {
     Matrix m;
@@ -420,4 +423,177 @@ TEST(MatrixTestsLab2, MoveAssignmentLeavesSourceEmpty) {
     ASSERT_EQ(k.getDimension(), 2);
     EXPECT_EQ(k.getElement(0, 0), 1);
     EXPECT_EQ(m.getDimension(), 0);
+}
+
+TEST(MatrixTestsLab3, StreamOutputStartsWithDimension) {
+    static const int data[4] = {1, 2, 3, 4};
+    std::stringstream ss;
+    ss << Matrix(2, data);
+    int dimension = 0;
+    ss >> dimension;
+    EXPECT_EQ(dimension, 2);
+}
+
+TEST(MatrixTestsLab3, TextRoundTripSingleMatrix) {
+    static const int data[4] = {1, 2, 3, 4};
+    Matrix m(2, data);
+    std::stringstream ss;
+    ss << m;
+    Matrix r;
+    ss >> r;
+    EXPECT_FALSE(ss.fail());
+    EXPECT_TRUE(r == m);
+}
+
+TEST(MatrixTestsLab3, TextRoundTripSeveralMatrices) {
+    static const int a[4] = {1, 2, 3, 4};
+    static const int b[9] = {2, 0, 1, 1, 3, 2, 3, 1, 4};
+    std::stringstream ss;
+    ss << Matrix(2, a) << Matrix(3, b);
+    Matrix r1;
+    Matrix r2;
+    ss >> r1 >> r2;
+    EXPECT_FALSE(ss.fail());
+    EXPECT_TRUE(r1 == Matrix(2, a));
+    EXPECT_TRUE(r2 == Matrix(3, b));
+}
+
+TEST(MatrixTestsLab3, TextRoundTripEmptyMatrix) {
+    std::stringstream ss;
+    ss << Matrix();
+    Matrix r(2);
+    ss >> r;
+    EXPECT_FALSE(ss.fail());
+    EXPECT_EQ(r.getDimension(), 0);
+}
+
+TEST(MatrixTestsLab3, StreamInputReadsKeyboardLikeFormat) {
+    std::istringstream ss("2 5 6 7 8");
+    Matrix m;
+    ss >> m;
+    ASSERT_EQ(m.getDimension(), 2);
+    EXPECT_EQ(m.getElement(0, 0), 5);
+    EXPECT_EQ(m.getElement(1, 1), 8);
+}
+
+TEST(MatrixTestsLab3, StreamInputFailsOnGarbageKeepsObject) {
+    static const int data[4] = {1, 2, 3, 4};
+    std::istringstream ss("oops");
+    Matrix m(2, data);
+    ss >> m;
+    EXPECT_TRUE(ss.fail());
+    EXPECT_TRUE(m == Matrix(2, data));
+}
+
+TEST(MatrixTestsLab3, StreamInputFailsOnNegativeDimension) {
+    std::istringstream ss("-3 1 2");
+    Matrix m(1);
+    ss >> m;
+    EXPECT_TRUE(ss.fail());
+    EXPECT_EQ(m.getDimension(), 1);
+}
+
+TEST(MatrixTestsLab3, StreamInputFailsOnTruncatedData) {
+    static const int data[4] = {1, 2, 3, 4};
+    std::istringstream ss("2 1 2 3");
+    Matrix m(2, data);
+    ss >> m;
+    EXPECT_TRUE(ss.fail());
+    EXPECT_TRUE(m == Matrix(2, data));
+}
+
+TEST(MatrixTestsLab3, StreamInputLoopStopsAtEndOfStream) {
+    static const int a[4] = {1, 2, 3, 4};
+    static const int b[9] = {2, 0, 1, 1, 3, 2, 3, 1, 4};
+    std::stringstream ss;
+    ss << Matrix(2, a) << Matrix(3, b);
+    int count = 0;
+    Matrix m;
+    while (ss >> m) {
+        ++count;
+    }
+    EXPECT_EQ(count, 2);
+}
+
+TEST(MatrixTestsLab3, BinaryRoundTripSingleMatrix) {
+    static const int data[9] = {2, 0, 1, 1, 3, 2, 3, 1, 4};
+    Matrix m(3, data);
+    std::stringstream ss;
+    m.saveBinary(ss);
+    Matrix r;
+    r.loadBinary(ss);
+    EXPECT_FALSE(ss.fail());
+    EXPECT_TRUE(r == m);
+}
+
+TEST(MatrixTestsLab3, BinaryRoundTripSeveralMatricesIncludingEmpty) {
+    static const int a[4] = {1, 2, 3, 4};
+    std::stringstream ss;
+    Matrix(2, a).saveBinary(ss);
+    Matrix().saveBinary(ss);
+    Matrix r1;
+    Matrix r2(3);
+    r1.loadBinary(ss);
+    r2.loadBinary(ss);
+    EXPECT_FALSE(ss.fail());
+    EXPECT_TRUE(r1 == Matrix(2, a));
+    EXPECT_EQ(r2.getDimension(), 0);
+}
+
+TEST(MatrixTestsLab3, BinaryLoadFailsAtEndOfStream) {
+    static const int a[4] = {1, 2, 3, 4};
+    std::stringstream ss;
+    Matrix(2, a).saveBinary(ss);
+    Matrix m;
+    m.loadBinary(ss);
+    ASSERT_FALSE(ss.fail());
+    Matrix extra;
+    extra.loadBinary(ss);
+    EXPECT_TRUE(ss.fail());
+}
+
+TEST(MatrixTestsLab3, TextFileSavesAndLoadsAnyNumberOfMatrices) {
+    static const int a[4] = {1, 2, 3, 4};
+    static const int b[9] = {2, 0, 1, 1, 3, 2, 3, 1, 4};
+    const char* path = "matrix_lab3_text_test.txt";
+    {
+        std::ofstream out(path);
+        out << 2 << '\n';
+        out << Matrix(2, a) << Matrix(3, b);
+    }
+    std::ifstream in(path);
+    int count = 0;
+    in >> count;
+    ASSERT_EQ(count, 2);
+    Matrix r1;
+    Matrix r2;
+    in >> r1 >> r2;
+    EXPECT_FALSE(in.fail());
+    EXPECT_TRUE(r1 == Matrix(2, a));
+    EXPECT_TRUE(r2 == Matrix(3, b));
+    std::remove(path);
+}
+
+TEST(MatrixTestsLab3, BinaryFileSavesAndLoadsAnyNumberOfMatrices) {
+    static const int a[4] = {1, 2, 3, 4};
+    const char* path = "matrix_lab3_bin_test.bin";
+    {
+        std::ofstream out(path, std::ios::binary);
+        int count = 2;
+        out.write(reinterpret_cast<const char*>(&count), sizeof(count));
+        Matrix(2, a).saveBinary(out);
+        Matrix().saveBinary(out);
+    }
+    std::ifstream in(path, std::ios::binary);
+    int count = 0;
+    in.read(reinterpret_cast<char*>(&count), sizeof(count));
+    ASSERT_EQ(count, 2);
+    Matrix r1;
+    Matrix r2;
+    r1.loadBinary(in);
+    r2.loadBinary(in);
+    EXPECT_FALSE(in.fail());
+    EXPECT_TRUE(r1 == Matrix(2, a));
+    EXPECT_EQ(r2.getDimension(), 0);
+    std::remove(path);
 }

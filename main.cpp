@@ -1,42 +1,60 @@
 #include <iostream>
+#include <fstream>
+
 #include <gtest/gtest.h>
+
 #include "Matrix.h"
 
 int main(int argc, char** argv) {
     static const int data[4] = {1, 2, 3, 4};
-    static const int dataB[4] = {4, 3, 2, 1};
-    static const int data3[9] = {2, 0, 1, 1, 3, 2, 3, 1, 4};
+    static const int dataB[9] = {2, 0, 1, 1, 3, 2, 3, 1, 4};
 
     Matrix a(2, data);
-    Matrix b(2, dataB);
+    Matrix b(3, dataB);
 
-    std::cout << "a:\n" << a;
-    std::cout << "\nb:\n" << b;
+    std::cout << "enter dimension and elements from keyboard:\n";
+    Matrix fromKeyboard;
+    std::cin >> fromKeyboard;
+    std::cout << "\nyou entered:\n" << fromKeyboard;
 
-    std::cout << "\na + b:\n" << a + b;
-    std::cout << "\na - b:\n" << a - b;
+    {
+        std::ofstream out("matrices.txt");
+        out << 2 << '\n';
+        out << a << b;
+    }
+    {
+        std::ifstream in("matrices.txt");
+        int count = 0;
+        in >> count;
+        std::cout << "\nloaded " << count << " matrices from matrices.txt:\n";
+        for (int i = 0; i < count; ++i) {
+            Matrix m;
+            in >> m;
+            std::cout << m << '\n';
+        }
+    }
 
-    std::cout << "\na[0][1]: " << a[0][1] << "\n";
-
-    Matrix c = a;
-    c[1][0] = 9;
-    std::cout << "\nc = a, then c[1][0] = 9:\n" << c;
-    std::cout << "\na unchanged:\n" << a;
-
-    std::cout << "\na() (determinant): " << a() << "\n";
-
-    Matrix s(3, data3);
-    std::cout << "\ns (3x3):\n" << s;
-    std::cout << "\ns() (determinant): " << s() << "\n";
-
-    Matrix d(2, dataB);
-    d = a;
-    d[0][0] = 100;
-    std::cout << "\nd = a, then d[0][0] = 100:\n" << d;
-    std::cout << "\na unchanged:\n" << a;
+    {
+        std::ofstream out("matrices.bin", std::ios::binary);
+        int count = 2;
+        out.write(reinterpret_cast<const char*>(&count), sizeof(count));
+        a.saveBinary(out);
+        b.saveBinary(out);
+    }
+    {
+        std::ifstream in("matrices.bin", std::ios::binary);
+        int count = 0;
+        in.read(reinterpret_cast<char*>(&count), sizeof(count));
+        std::cout << "loaded " << count << " matrices from matrices.bin:\n";
+        for (int i = 0; i < count; ++i) {
+            Matrix m;
+            m.loadBinary(in);
+            std::cout << m << '\n';
+        }
+    }
 
     std::cout << "\n--- running tests ---\n\n";
-    ::testing::GTEST_FLAG(filter) = "MatrixTestsLab2.*";
+    ::testing::GTEST_FLAG(filter) = "MatrixTestsLab3.*";
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }
