@@ -3,13 +3,13 @@
 #include "Matrix.h"
 #include <cstring>
 
-TEST(MatrixTests, DefaultConstructorCreatesEmptyMatrix) {
+TEST(MatrixTestsLab1, DefaultConstructorCreatesEmptyMatrix) {
     Matrix m;
     EXPECT_EQ(m.getDimension(), 0);
     EXPECT_TRUE(m.getElements() == nullptr);
 }
 
-TEST(MatrixTests, DimensionConstructorCreatesZeroMatrix) {
+TEST(MatrixTestsLab1, DimensionConstructorCreatesZeroMatrix) {
     Matrix m(3);
     ASSERT_EQ(m.getDimension(), 3);
     for (int i = 0; i < 3; ++i)
@@ -17,7 +17,7 @@ TEST(MatrixTests, DimensionConstructorCreatesZeroMatrix) {
             EXPECT_EQ(m.getElement(i, j), 0);
 }
 
-TEST(MatrixTests, DataConstructorCopiesElements) {
+TEST(MatrixTestsLab1, DataConstructorCopiesElements) {
     static const int data[4] = {1, 2, 3, 4};
     Matrix m(2, data);
     EXPECT_EQ(m.getElement(0, 0), 1);
@@ -26,14 +26,14 @@ TEST(MatrixTests, DataConstructorCopiesElements) {
     EXPECT_EQ(m.getElement(1, 1), 4);
 }
 
-TEST(MatrixTests, DataConstructorDoesNotAliasSourceArray) {
+TEST(MatrixTestsLab1, DataConstructorDoesNotAliasSourceArray) {
     int data[4] = {1, 2, 3, 4};
     Matrix m(2, data);
     data[0] = 100;
     EXPECT_EQ(m.getElement(0, 0), 1);
 }
 
-TEST(MatrixTests, CopyConstructorMakesIndependentCopy) {
+TEST(MatrixTestsLab1, CopyConstructorMakesIndependentCopy) {
     static const int data[4] = {1, 2, 3, 4};
     Matrix a(2, data);
     Matrix b(a);
@@ -43,7 +43,7 @@ TEST(MatrixTests, CopyConstructorMakesIndependentCopy) {
     EXPECT_EQ(b.getElement(0, 0), 99);
 }
 
-TEST(MatrixTests, MoveConstructorStealsData) {
+TEST(MatrixTestsLab1, MoveConstructorStealsData) {
     static const int data[4] = {1, 2, 3, 4};
     Matrix a(2, data);
     Matrix b(std::move(a));
@@ -53,7 +53,7 @@ TEST(MatrixTests, MoveConstructorStealsData) {
     EXPECT_TRUE(a.getElements() == nullptr);
 }
 
-TEST(MatrixTests, CopyAssignmentCopiesData) {
+TEST(MatrixTestsLab1, CopyAssignmentCopiesData) {
     static const int a[4] = {1, 2, 3, 4};
     static const int b[4] = {9, 8, 7, 6};
     Matrix m(2, a);
@@ -62,7 +62,7 @@ TEST(MatrixTests, CopyAssignmentCopiesData) {
     EXPECT_TRUE(k == m);
 }
 
-TEST(MatrixTests, MoveAssignmentStealsData) {
+TEST(MatrixTestsLab1, MoveAssignmentStealsData) {
     static const int data[4] = {1, 2, 3, 4};
     Matrix a(2, data);
     Matrix b(3);
@@ -72,7 +72,7 @@ TEST(MatrixTests, MoveAssignmentStealsData) {
     EXPECT_EQ(a.getDimension(), 0);
 }
 
-TEST(MatrixTests, SelfAssignmentIsSafeForCopyAndMove) {
+TEST(MatrixTestsLab1, SelfAssignmentIsSafeForCopyAndMove) {
     static const int data[4] = {1, 2, 3, 4};
     Matrix m(2, data);
     Matrix* p = &m;
@@ -83,7 +83,7 @@ TEST(MatrixTests, SelfAssignmentIsSafeForCopyAndMove) {
     EXPECT_EQ(m.getElement(0, 0), 1);
 }
 
-TEST(MatrixTests, GettersReturnDimensionAndFlatData) {
+TEST(MatrixTestsLab1, GettersReturnDimensionAndFlatData) {
     static const int data[4] = {5, 6, 7, 8};
     Matrix m(2, data);
     EXPECT_EQ(m.getDimension(), 2);
@@ -93,7 +93,7 @@ TEST(MatrixTests, GettersReturnDimensionAndFlatData) {
     EXPECT_EQ(flat[3], 8);
 }
 
-TEST(MatrixTests, GetElementUsesRowColIndexing) {
+TEST(MatrixTestsLab1, GetElementUsesRowColIndexing) {
     static const int data[9] = {1, 2, 3, 4, 5, 6, 7, 8, 9};
     Matrix m(3, data);
     EXPECT_EQ(m.getElement(0, 2), 3);
@@ -101,7 +101,7 @@ TEST(MatrixTests, GetElementUsesRowColIndexing) {
     EXPECT_EQ(m.getElement(2, 1), 8);
 }
 
-TEST(MatrixTests, SetElementReturnsNewKeepsOriginal) {
+TEST(MatrixTestsLab1, SetElementReturnsNewKeepsOriginal) {
     static const int data[4] = {1, 2, 3, 4};
     Matrix m(2, data);
     Matrix changed = m.setElement(1, 0, 42);
@@ -109,7 +109,7 @@ TEST(MatrixTests, SetElementReturnsNewKeepsOriginal) {
     EXPECT_EQ(m.getElement(1, 0), 3);
 }
 
-TEST(MatrixTests, SetElementsReplacesAllKeepsOriginal) {
+TEST(MatrixTestsLab1, SetElementsReplacesAllKeepsOriginal) {
     static const int data[4] = {1, 2, 3, 4};
     static const int fresh[4] = {9, 9, 9, 9};
     Matrix m(2, data);
@@ -119,7 +119,7 @@ TEST(MatrixTests, SetElementsReplacesAllKeepsOriginal) {
     EXPECT_EQ(m.getElement(0, 0), 1);
 }
 
-TEST(MatrixTests, SetDimensionGrowsKeepsCommonBlock) {
+TEST(MatrixTestsLab1, SetDimensionGrowsKeepsCommonBlock) {
     static const int data[4] = {1, 2, 3, 4};
     Matrix grown = Matrix(2, data).setDimension(3);
     ASSERT_EQ(grown.getDimension(), 3);
@@ -128,7 +128,7 @@ TEST(MatrixTests, SetDimensionGrowsKeepsCommonBlock) {
     EXPECT_EQ(grown.getElement(2, 2), 0);
 }
 
-TEST(MatrixTests, SetDimensionShrinksKeepsCommonBlock) {
+TEST(MatrixTestsLab1, SetDimensionShrinksKeepsCommonBlock) {
     static const int data[9] = {1, 2, 3, 4, 5, 6, 7, 8, 9};
     Matrix shrunk = Matrix(3, data).setDimension(2);
     ASSERT_EQ(shrunk.getDimension(), 2);
@@ -136,45 +136,45 @@ TEST(MatrixTests, SetDimensionShrinksKeepsCommonBlock) {
     EXPECT_EQ(shrunk.getElement(1, 1), 5);
 }
 
-TEST(MatrixTests, TranspositionSwapsRowsAndColumns) {
+TEST(MatrixTestsLab1, TranspositionSwapsRowsAndColumns) {
     static const int data[4] = {1, 2, 3, 4};
     static const int expected[4] = {1, 3, 2, 4};
     EXPECT_TRUE(Matrix(2, data).transposition() == Matrix(2, expected));
 }
 
-TEST(MatrixTests, SummaryAddsElementwise) {
+TEST(MatrixTestsLab1, SummaryAddsElementwise) {
     static const int a[4] = {1, 2, 3, 4};
     static const int b[4] = {10, 20, 30, 40};
     static const int expected[4] = {11, 22, 33, 44};
     EXPECT_TRUE(Matrix(2, a).summary(Matrix(2, b)) == Matrix(2, expected));
 }
 
-TEST(MatrixTests, SummaryThrowsOnDimensionMismatch) {
+TEST(MatrixTestsLab1, SummaryThrowsOnDimensionMismatch) {
     Matrix a(2);
     Matrix b(3);
     EXPECT_THROW(a.summary(b), std::invalid_argument);
 }
 
-TEST(MatrixTests, MatrixMultiplyComputesDotProducts) {
+TEST(MatrixTestsLab1, MatrixMultiplyComputesDotProducts) {
     static const int a[4] = {1, 2, 3, 4};
     static const int b[4] = {4, 3, 2, 1};
     static const int expected[4] = {8, 5, 20, 13};
     EXPECT_TRUE(Matrix(2, a).matrixMultiply(Matrix(2, b)) == Matrix(2, expected));
 }
 
-TEST(MatrixTests, MatrixMultiplyThrowsOnDimensionMismatch) {
+TEST(MatrixTestsLab1, MatrixMultiplyThrowsOnDimensionMismatch) {
     Matrix a(2);
     Matrix b(4);
     EXPECT_THROW(a.matrixMultiply(b), std::invalid_argument);
 }
 
-TEST(MatrixTests, NumberMultiplyScalesAllElements) {
+TEST(MatrixTestsLab1, NumberMultiplyScalesAllElements) {
     static const int data[4] = {1, 2, 3, 4};
     static const int expected[4] = {3, 6, 9, 12};
     EXPECT_TRUE(Matrix(2, data).numberMultiply(3) == Matrix(2, expected));
 }
 
-TEST(MatrixTests, EqualityOperatorsCompareByValue) {
+TEST(MatrixTestsLab1, EqualityOperatorsCompareByValue) {
     static const int a[4] = {1, 2, 3, 4};
     static const int same[4] = {1, 2, 3, 4};
     static const int other[4] = {1, 2, 3, 5};
@@ -186,14 +186,14 @@ TEST(MatrixTests, EqualityOperatorsCompareByValue) {
 }
 
 
-TEST(MatrixTests, ToStringEmptyMatrix) {
+TEST(MatrixTestsLab1, ToStringEmptyMatrix) {
     Matrix m;
     char* str = m.toString();
     EXPECT_STREQ(str, "");
     delete[] str;
 }
 
-TEST(MatrixTests, ToString2x2Matrix) {
+TEST(MatrixTestsLab1, ToString2x2Matrix) {
     static const int data[4] = {1, 2, 3, 4};
     Matrix m(2, data);
     char* str = m.toString();
@@ -201,7 +201,7 @@ TEST(MatrixTests, ToString2x2Matrix) {
     delete[] str;
 }
 
-TEST(MatrixTests, ToStringWithNegativeNumbers) {
+TEST(MatrixTestsLab1, ToStringWithNegativeNumbers) {
     static const int data[4] = {-1, -2, -3, -4};
     Matrix m(2, data);
     char* str = m.toString();
@@ -209,13 +209,13 @@ TEST(MatrixTests, ToStringWithNegativeNumbers) {
     delete[] str;
 }
 
-TEST(MatrixTests, ToStringZeroMatrix) {
+TEST(MatrixTestsLab1, ToStringZeroMatrix) {
     Matrix m(2);
     char* str = m.toString();
     EXPECT_STREQ(str, "0\t0\n0\t0");
     delete[] str;
 }
-TEST(MatrixTests, CreateMatrixWithNegativeNumbers) {
+TEST(MatrixTestsLab1, CreateMatrixWithNegativeNumbers) {
     static const int data[4] = {-1, -2, -3, -4};
     Matrix m(2, data);
     
@@ -226,7 +226,7 @@ TEST(MatrixTests, CreateMatrixWithNegativeNumbers) {
     EXPECT_EQ(m.getElement(1, 0), -3);
     EXPECT_EQ(m.getElement(1, 1), -4);
 }
-TEST(MatrixTests, SummaryOfTwoNegativeMatrices) {
+TEST(MatrixTestsLab1, SummaryOfTwoNegativeMatrices) {
     static const int a[4] = {-1, -2, -3, -4};
     static const int b[4] = {-5, -6, -7, -8};
     static const int expected[4] = {-6, -8, -10, -12};
@@ -237,7 +237,7 @@ TEST(MatrixTests, SummaryOfTwoNegativeMatrices) {
     
     EXPECT_TRUE(result == Matrix(2, expected));
 }
-TEST(MatrixTests, SummaryOfPositiveAndNegativeMatrices) {
+TEST(MatrixTestsLab1, SummaryOfPositiveAndNegativeMatrices) {
     static const int a[4] = {10, 20, 30, 40};
     static const int b[4] = {-5, -10, -15, -20};
     static const int expected[4] = {5, 10, 15, 20};
@@ -247,4 +247,177 @@ TEST(MatrixTests, SummaryOfPositiveAndNegativeMatrices) {
     Matrix result = m1.summary(m2);
     
     EXPECT_TRUE(result == Matrix(2, expected));
+}
+
+TEST(MatrixTestsLab2, PlusAddsElementwise) {
+    static const int a[4] = {1, 2, 3, 4};
+    static const int b[4] = {10, 20, 30, 40};
+    static const int expected[4] = {11, 22, 33, 44};
+    EXPECT_TRUE(Matrix(2, a) + Matrix(2, b) == Matrix(2, expected));
+}
+
+TEST(MatrixTestsLab2, PlusWithZeroMatrixKeepsOriginal) {
+    static const int a[4] = {1, 2, 3, 4};
+    EXPECT_TRUE(Matrix(2, a) + Matrix(2) == Matrix(2, a));
+}
+
+TEST(MatrixTestsLab2, PlusIsCommutative) {
+    static const int a[4] = {1, 2, 3, 4};
+    static const int b[4] = {4, 3, 2, 1};
+    EXPECT_TRUE(Matrix(2, a) + Matrix(2, b) == Matrix(2, b) + Matrix(2, a));
+}
+
+TEST(MatrixTestsLab2, PlusThrowsOnDimensionMismatch) {
+    Matrix a(2);
+    Matrix b(3);
+    EXPECT_THROW(a + b, std::invalid_argument);
+}
+
+TEST(MatrixTestsLab2, MinusSubtractsElementwise) {
+    static const int a[4] = {1, 2, 3, 4};
+    static const int b[4] = {4, 3, 2, 1};
+    static const int expected[4] = {-3, -1, 1, 3};
+    EXPECT_TRUE(Matrix(2, a) - Matrix(2, b) == Matrix(2, expected));
+}
+
+TEST(MatrixTestsLab2, MinusSelfGivesZeroMatrix) {
+    static const int a[4] = {1, 2, 3, 4};
+    EXPECT_TRUE(Matrix(2, a) - Matrix(2, a) == Matrix(2));
+}
+
+TEST(MatrixTestsLab2, MinusThrowsOnDimensionMismatch) {
+    Matrix a(2);
+    Matrix b(3);
+    EXPECT_THROW(a - b, std::invalid_argument);
+}
+
+TEST(MatrixTestsLab2, ReadsElementByRowAndColumn) {
+    static const int data[4] = {1, 2, 3, 4};
+    Matrix m(2, data);
+    EXPECT_EQ(m[0][1], 2);
+    EXPECT_EQ(m[1][0], 3);
+}
+
+TEST(MatrixTestsLab2, WritesElementInPlace) {
+    static const int data[4] = {1, 2, 3, 4};
+    Matrix m(2, data);
+    m[1][1] = 9;
+    EXPECT_EQ(m.getElement(1, 1), 9);
+    EXPECT_EQ(m[1][1], 9);
+}
+
+TEST(MatrixTestsLab2, ConstObjectAllowsReadOnlyIndexing) {
+    static const int data[4] = {1, 2, 3, 4};
+    const Matrix m(2, data);
+    EXPECT_EQ(m[0][0], 1);
+    EXPECT_EQ(m[1][1], 4);
+}
+
+TEST(MatrixTestsLab2, WriteTouchesOnlyRequestedRow) {
+    static const int data[9] = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+    Matrix m(3, data);
+    m[0][2] = 42;
+    EXPECT_EQ(m.getElement(0, 2), 42);
+    EXPECT_EQ(m.getElement(1, 2), 6);
+    EXPECT_EQ(m.getElement(2, 2), 9);
+}
+
+TEST(MatrixTestsLab2, RowOutOfRangeThrows) {
+    Matrix m(2);
+    EXPECT_THROW(m[2], std::out_of_range);
+    EXPECT_THROW(m[10], std::out_of_range);
+}
+
+TEST(MatrixTestsLab2, NegativeRowThrows) {
+    Matrix m(2);
+    EXPECT_THROW(m[-1], std::out_of_range);
+}
+
+TEST(MatrixTestsLab2, EmptyMatrixIndexingThrows) {
+    Matrix m;
+    EXPECT_THROW(m[0], std::out_of_range);
+}
+
+TEST(MatrixTestsLab2, OneByOne) {
+    static const int data[1] = {5};
+    EXPECT_EQ(Matrix(1, data)(), 5);
+}
+
+TEST(MatrixTestsLab2, TwoByTwo) {
+    static const int data[4] = {1, 2, 3, 4};
+    EXPECT_EQ(Matrix(2, data)(), -2);
+}
+
+TEST(MatrixTestsLab2, ThreeByThree) {
+    static const int data[9] = {2, 0, 1, 1, 3, 2, 3, 1, 4};
+    EXPECT_EQ(Matrix(3, data)(), 12);
+}
+
+TEST(MatrixTestsLab2, SingularMatrixGivesZero) {
+    static const int data[9] = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+    EXPECT_EQ(Matrix(3, data)(), 0);
+}
+
+TEST(MatrixTestsLab2, DiagonalMatrixGivesProductOfDiagonal) {
+    static const int data[9] = {2, 0, 0, 0, 3, 0, 0, 0, 4};
+    EXPECT_EQ(Matrix(3, data)(), 24);
+}
+
+TEST(MatrixTestsLab2, RowSwapFlipsSign) {
+    static const int a[4] = {1, 2, 3, 4};
+    static const int swapped[4] = {3, 4, 1, 2};
+    EXPECT_EQ(Matrix(2, swapped)(), -Matrix(2, a)());
+}
+
+TEST(MatrixTestsLab2, EmptyMatrixThrows) {
+    Matrix m;
+    EXPECT_THROW(m(), std::invalid_argument);
+}
+
+TEST(MatrixTestsLab2, CopyAssignmentMakesIndependentCopy) {
+    static const int a[4] = {1, 2, 3, 4};
+    static const int b[4] = {9, 9, 9, 9};
+    Matrix m(2, a);
+    Matrix k(2, b);
+    k = m;
+    k[0][0] = 99;
+    EXPECT_EQ(m.getElement(0, 0), 1);
+    EXPECT_EQ(k.getElement(0, 0), 99);
+}
+
+TEST(MatrixTestsLab2, CopyAssignmentAdoptsDimension) {
+    static const int a[4] = {1, 2, 3, 4};
+    Matrix m(2, a);
+    Matrix k(3);
+    k = m;
+    ASSERT_EQ(k.getDimension(), 2);
+    EXPECT_TRUE(k == m);
+}
+
+TEST(MatrixTestsLab2, SelfAssignmentKeepsObjectIntact) {
+    static const int a[4] = {1, 2, 3, 4};
+    Matrix m(2, a);
+    Matrix* p = &m;
+    *p = m;
+    ASSERT_EQ(m.getDimension(), 2);
+    EXPECT_EQ(m.getElement(1, 1), 4);
+}
+
+TEST(MatrixTestsLab2, AssignmentReturnsReferenceToSelf) {
+    static const int a[4] = {1, 2, 3, 4};
+    Matrix m(2, a);
+    Matrix d(2);
+    Matrix& ref = (d = m);
+    EXPECT_EQ(&ref, &d);
+    EXPECT_TRUE(ref == m);
+}
+
+TEST(MatrixTestsLab2, MoveAssignmentLeavesSourceEmpty) {
+    static const int a[4] = {1, 2, 3, 4};
+    Matrix m(2, a);
+    Matrix k(3);
+    k = std::move(m);
+    ASSERT_EQ(k.getDimension(), 2);
+    EXPECT_EQ(k.getElement(0, 0), 1);
+    EXPECT_EQ(m.getDimension(), 0);
 }

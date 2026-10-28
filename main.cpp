@@ -1,8 +1,8 @@
 #include <iostream>
-
+#include <gtest/gtest.h>
 #include "Matrix.h"
 
-int main() {
+int main(int argc, char** argv) {
     static const int data[4] = {1, 2, 3, 4};
     static const int dataB[4] = {4, 3, 2, 1};
     static const int data3[9] = {2, 0, 1, 1, 3, 2, 3, 1, 4};
@@ -35,5 +35,8 @@ int main() {
     std::cout << "\nd = a, then d[0][0] = 100:\n" << d;
     std::cout << "\na unchanged:\n" << a;
 
-    return 0;
+    std::cout << "\n--- running tests ---\n\n";
+    ::testing::GTEST_FLAG(filter) = "MatrixTestsLab2.*";
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
 }
