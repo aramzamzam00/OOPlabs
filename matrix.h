@@ -25,11 +25,11 @@ class Matrix {
         Matrix setElement(int row, int col, int value) const;
 
         // операции
-        Matrix transposition() const;
-        Matrix summary(const Matrix& other) const;
-        Matrix matrixMultiply(const Matrix& other) const;
-        Matrix numberMultiply(int number) const;
-        char* toString() const;
+        Matrix transpose() const;
+        Matrix add(const Matrix& other) const;
+        Matrix multiply(const Matrix& other) const;
+        Matrix multiplyByNumber(int number) const;
+        char* formatElements() const;
 
         //Лаба 2
         Matrix operator+(const Matrix& other) const;

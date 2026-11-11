@@ -2,12 +2,16 @@
 #include <iostream>
 #include <stdexcept>
 #include <cstring>
+#include <cstdio>
+#include <limits>
+#include <new>
 
 namespace {
     int indexOf(int row, int col, int dim) {
         return row * dim + col;
     }
 }
+
 //конструкторы
 Matrix::Matrix() : dimension(0), elements(nullptr) {}
 Matrix::Matrix(int newDimension) : dimension(newDimension), elements(new int[newDimension*newDimension]) {
@@ -18,6 +22,7 @@ Matrix::Matrix(int newDimension, const int* newElements)
 {
     for (int i = 0; i < dimension*dimension; i++) elements[i] = newElements[i];
 }
+
 // 5
 Matrix::~Matrix() {
     delete[] elements;
@@ -97,8 +102,9 @@ Matrix Matrix::setElement(int row, int col, int value) const {
     result.elements[indexOf(row, col, dimension)] = value;
     return result;
 }
+
 // операции над матрицами
-Matrix Matrix::transposition() const {
+Matrix Matrix::transpose() const {
     Matrix result(dimension);
     for (int i = 0; i < dimension; ++i) {
         for (int j = 0; j < dimension; ++j) {
@@ -109,7 +115,7 @@ Matrix Matrix::transposition() const {
     return result;
 }
 
-Matrix Matrix::summary(const Matrix& other) const {
+Matrix Matrix::add(const Matrix& other) const {
     if (dimension != other.dimension) {
         throw std::invalid_argument("summary: different matrix dimensions");
     }
@@ -120,7 +126,7 @@ Matrix Matrix::summary(const Matrix& other) const {
     return result;
 }
 
-Matrix Matrix::matrixMultiply(const Matrix& other) const {
+Matrix Matrix::multiply(const Matrix& other) const {
     if (dimension != other.dimension) {
         throw std::invalid_argument("matrixMultiply: different matrix dimensions");
     }
@@ -138,7 +144,7 @@ Matrix Matrix::matrixMultiply(const Matrix& other) const {
     return result;
 }
 
-Matrix Matrix::numberMultiply(int number) const {
+Matrix Matrix::multiplyByNumber(int number) const {
     Matrix result(dimension);
     for (int i = 0; i < dimension * dimension; ++i) {
         result.elements[i] = elements[i] * number;
@@ -146,8 +152,9 @@ Matrix Matrix::numberMultiply(int number) const {
     return result;
 }
 
+//Лаба 2
 Matrix Matrix::operator+(const Matrix& other) const {
-    return summary(other);
+    return add(other);
 }
 
 Matrix operator-(const Matrix& leftMatrix, const Matrix& rightMatrix) {
@@ -220,33 +227,38 @@ int Matrix::operator()() const {
     return static_cast<int>(det);
 }
 
-void Matrix::saveBinary(std::ostream& ostream) const {
-    ostream.write(reinterpret_cast<const char*>(&dimension), sizeof(dimension));
-    if (dimension > 0) {
-        ostream.write(reinterpret_cast<const char*>(elements),
-                      sizeof(int) * dimension * dimension);
+//Лаба 3
+void Matrix::saveBinary(std::ostream& out) const {
+    if (dimension <= 0) {
+        out.setstate(std::ios::failbit);
+        return;
     }
+
+    out.write(reinterpret_cast<const char*>(&dimension), sizeof(dimension));
+    out.write(
+        reinterpret_cast<const char*>(elements),
+        static_cast<std::streamsize>(sizeof(int)) * dimension * dimension
+    );
 }
 
-void Matrix::loadBinary(std::istream& istream) {
-    int dimension = 0;
-    istream.read(reinterpret_cast<char*>(&dimension), sizeof(dimension));
-    if (!istream) {
-        return;
+void Matrix::loadBinary(std::istream& in) {
+    int n = 0;
+    if (!in.read(reinterpret_cast<char*>(&n), sizeof(n))) return;
+
+    try {
+        Matrix temporary(n);
+
+        in.read(
+            reinterpret_cast<char*>(temporary.elements),
+            static_cast<std::streamsize>(sizeof(int)) * n * n
+        );
+
+        if (in) *this = temporary;
+    } catch (const std::invalid_argument&) {
+        in.setstate(std::ios::failbit);
+    } catch (const std::bad_alloc&) {
+        in.setstate(std::ios::failbit);
     }
-    if (dimension < 0) {
-        istream.setstate(std::ios_base::failbit);
-        return;
-    }
-    int* buffer = new int[dimension * dimension];
-    if (dimension > 0) {
-        istream.read(reinterpret_cast<char*>(buffer),
-                     sizeof(int) * dimension * dimension);
-    }
-    if (istream) {
-        *this = Matrix(dimension, buffer);
-    }
-    delete[] buffer;
 }
 
 bool operator==(const Matrix& leftMatrix, const Matrix& rightMatrix) {
@@ -265,6 +277,12 @@ bool operator!=(const Matrix& leftMatrix, const Matrix& rightMatrix) {
 
 std::ostream& operator<<(std::ostream& ostream, const Matrix& matrix) {
     const int n = matrix.getDimension();
+
+    if (n <= 0) {
+        ostream.setstate(std::ios::failbit);
+        return ostream;
+    }
+
     ostream << n << '\n';
     for (int i = 0; i < n; ++i) {
         for (int j = 0; j < n; ++j) {
@@ -276,47 +294,43 @@ std::ostream& operator<<(std::ostream& ostream, const Matrix& matrix) {
     return ostream;
 }
 
-std::istream& operator>>(std::istream& istream, Matrix& matrix) {
-    int dimension = 0;
-    if (!(istream >> dimension)) {
-        return istream;
+std::istream& operator>>(std::istream& in, Matrix& matrix) {
+    int n = 0;
+    if (!(in >> n)) return in;
+
+    try {
+        Matrix temporary(n);
+
+        for (int row = 0; row < n; ++row)
+            for (int col = 0; col < n; ++col)
+                if (!(in >> temporary[row][col])) return in;
+
+        matrix = temporary;
+    } catch (const std::invalid_argument&) {
+        in.setstate(std::ios::failbit);
+    } catch (const std::bad_alloc&) {
+        in.setstate(std::ios::failbit);
     }
-    if (dimension < 0) {
-        istream.setstate(std::ios_base::failbit);
-        return istream;
-    }
-    int* buffer = new int[dimension * dimension];
-    bool loaded = true;
-    for (int i = 0; i < dimension * dimension; ++i) {
-        if (!(istream >> buffer[i])) {
-            loaded = false;
-            break;
-        }
-    }
-    if (loaded) {
-        matrix = Matrix(dimension, buffer);
-    }
-    delete[] buffer;
-    return istream;
+    return in;
 }
 
-char* Matrix::toString() const {
+char* Matrix::formatElements() const {
     if (dimension == 0) {
         char* empty = new char[1];
         empty[0] = '\0';
         return empty;
     }
-    int maxLen = dimension * dimension * 12;
+    std::size_t maxLen = static_cast<std::size_t>(dimension) * dimension * 12 + 1;
     char* buffer = new char[maxLen];
-    int pos = 0;
+    std::size_t pos = 0;
 
     for (int i = 0; i < dimension; ++i) {
         for (int j = 0; j < dimension; ++j) {
             char numStr[12];
-            sprintf(numStr, "%d", elements[i * dimension + j]);
+            std::snprintf(numStr, sizeof(numStr), "%d", elements[i * dimension + j]);
 
-            int len = strlen(numStr);
-            for (int k = 0; k < len; ++k) {
+            std::size_t len = std::strlen(numStr);
+            for (std::size_t k = 0; k < len; ++k) {
                 buffer[pos++] = numStr[k];
             }
 
@@ -324,7 +338,7 @@ char* Matrix::toString() const {
                 buffer[pos++] = '\t';
             }
         }
-        
+
         if (i + 1 < dimension) {
             buffer[pos++] = '\n';
         }

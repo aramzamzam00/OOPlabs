@@ -2,7 +2,6 @@
 #include <gtest/gtest.h>
 #include "Matrix.h"
 #include <cstring>
-#include <sstream>
 #include <fstream>
 #include <cstdio>
 
@@ -142,39 +141,39 @@ TEST(MatrixTestsLab1, SetDimensionShrinksKeepsCommonBlock) {
 TEST(MatrixTestsLab1, TranspositionSwapsRowsAndColumns) {
     static const int data[4] = {1, 2, 3, 4};
     static const int expected[4] = {1, 3, 2, 4};
-    EXPECT_TRUE(Matrix(2, data).transposition() == Matrix(2, expected));
+    EXPECT_TRUE(Matrix(2, data).transpose() == Matrix(2, expected));
 }
 
 TEST(MatrixTestsLab1, SummaryAddsElementwise) {
     static const int a[4] = {1, 2, 3, 4};
     static const int b[4] = {10, 20, 30, 40};
     static const int expected[4] = {11, 22, 33, 44};
-    EXPECT_TRUE(Matrix(2, a).summary(Matrix(2, b)) == Matrix(2, expected));
+    EXPECT_TRUE(Matrix(2, a).add(Matrix(2, b)) == Matrix(2, expected));
 }
 
 TEST(MatrixTestsLab1, SummaryThrowsOnDimensionMismatch) {
     Matrix a(2);
     Matrix b(3);
-    EXPECT_THROW(a.summary(b), std::invalid_argument);
+    EXPECT_THROW(a.add(b), std::invalid_argument);
 }
 
 TEST(MatrixTestsLab1, MatrixMultiplyComputesDotProducts) {
     static const int a[4] = {1, 2, 3, 4};
     static const int b[4] = {4, 3, 2, 1};
     static const int expected[4] = {8, 5, 20, 13};
-    EXPECT_TRUE(Matrix(2, a).matrixMultiply(Matrix(2, b)) == Matrix(2, expected));
+    EXPECT_TRUE(Matrix(2, a).multiply(Matrix(2, b)) == Matrix(2, expected));
 }
 
 TEST(MatrixTestsLab1, MatrixMultiplyThrowsOnDimensionMismatch) {
     Matrix a(2);
     Matrix b(4);
-    EXPECT_THROW(a.matrixMultiply(b), std::invalid_argument);
+    EXPECT_THROW(a.multiply(b), std::invalid_argument);
 }
 
 TEST(MatrixTestsLab1, NumberMultiplyScalesAllElements) {
     static const int data[4] = {1, 2, 3, 4};
     static const int expected[4] = {3, 6, 9, 12};
-    EXPECT_TRUE(Matrix(2, data).numberMultiply(3) == Matrix(2, expected));
+    EXPECT_TRUE(Matrix(2, data).multiplyByNumber(3) == Matrix(2, expected));
 }
 
 TEST(MatrixTestsLab1, EqualityOperatorsCompareByValue) {
@@ -191,7 +190,7 @@ TEST(MatrixTestsLab1, EqualityOperatorsCompareByValue) {
 
 TEST(MatrixTestsLab1, ToStringEmptyMatrix) {
     Matrix m;
-    char* str = m.toString();
+    char* str = m.formatElements();
     EXPECT_STREQ(str, "");
     delete[] str;
 }
@@ -199,7 +198,7 @@ TEST(MatrixTestsLab1, ToStringEmptyMatrix) {
 TEST(MatrixTestsLab1, ToString2x2Matrix) {
     static const int data[4] = {1, 2, 3, 4};
     Matrix m(2, data);
-    char* str = m.toString();
+    char* str = m.formatElements();
     EXPECT_STREQ(str, "1\t2\n3\t4");
     delete[] str;
 }
@@ -207,14 +206,14 @@ TEST(MatrixTestsLab1, ToString2x2Matrix) {
 TEST(MatrixTestsLab1, ToStringWithNegativeNumbers) {
     static const int data[4] = {-1, -2, -3, -4};
     Matrix m(2, data);
-    char* str = m.toString();
+    char* str = m.formatElements();
     EXPECT_STREQ(str, "-1\t-2\n-3\t-4");
     delete[] str;
 }
 
 TEST(MatrixTestsLab1, ToStringZeroMatrix) {
     Matrix m(2);
-    char* str = m.toString();
+    char* str = m.formatElements();
     EXPECT_STREQ(str, "0\t0\n0\t0");
     delete[] str;
 }
@@ -236,7 +235,7 @@ TEST(MatrixTestsLab1, SummaryOfTwoNegativeMatrices) {
     
     Matrix m1(2, a);
     Matrix m2(2, b);
-    Matrix result = m1.summary(m2);
+    Matrix result = m1.add(m2);
     
     EXPECT_TRUE(result == Matrix(2, expected));
 }
@@ -247,7 +246,7 @@ TEST(MatrixTestsLab1, SummaryOfPositiveAndNegativeMatrices) {
     
     Matrix m1(2, a);
     Matrix m2(2, b);
-    Matrix result = m1.summary(m2);
+    Matrix result = m1.add(m2);
     
     EXPECT_TRUE(result == Matrix(2, expected));
 }
@@ -424,176 +423,338 @@ TEST(MatrixTestsLab2, MoveAssignmentLeavesSourceEmpty) {
     EXPECT_EQ(k.getElement(0, 0), 1);
     EXPECT_EQ(m.getDimension(), 0);
 }
-
-TEST(MatrixTestsLab3, StreamOutputStartsWithDimension) {
-    static const int data[4] = {1, 2, 3, 4};
-    std::stringstream ss;
-    ss << Matrix(2, data);
-    int dimension = 0;
-    ss >> dimension;
-    EXPECT_EQ(dimension, 2);
-}
-
-TEST(MatrixTestsLab3, TextRoundTripSingleMatrix) {
-    static const int data[4] = {1, 2, 3, 4};
-    Matrix m(2, data);
-    std::stringstream ss;
-    ss << m;
-    Matrix r;
-    ss >> r;
-    EXPECT_FALSE(ss.fail());
-    EXPECT_TRUE(r == m);
-}
-
-TEST(MatrixTestsLab3, TextRoundTripSeveralMatrices) {
-    static const int a[4] = {1, 2, 3, 4};
-    static const int b[9] = {2, 0, 1, 1, 3, 2, 3, 1, 4};
-    std::stringstream ss;
-    ss << Matrix(2, a) << Matrix(3, b);
-    Matrix r1;
-    Matrix r2;
-    ss >> r1 >> r2;
-    EXPECT_FALSE(ss.fail());
-    EXPECT_TRUE(r1 == Matrix(2, a));
-    EXPECT_TRUE(r2 == Matrix(3, b));
-}
-
-TEST(MatrixTestsLab3, TextRoundTripEmptyMatrix) {
-    std::stringstream ss;
-    ss << Matrix();
-    Matrix r(2);
-    ss >> r;
-    EXPECT_FALSE(ss.fail());
-    EXPECT_EQ(r.getDimension(), 0);
-}
-
-TEST(MatrixTestsLab3, StreamInputReadsKeyboardLikeFormat) {
-    std::istringstream ss("2 5 6 7 8");
-    Matrix m;
-    ss >> m;
-    ASSERT_EQ(m.getDimension(), 2);
-    EXPECT_EQ(m.getElement(0, 0), 5);
-    EXPECT_EQ(m.getElement(1, 1), 8);
-}
-
-TEST(MatrixTestsLab3, StreamInputFailsOnGarbageKeepsObject) {
-    static const int data[4] = {1, 2, 3, 4};
-    std::istringstream ss("oops");
-    Matrix m(2, data);
-    ss >> m;
-    EXPECT_TRUE(ss.fail());
-    EXPECT_TRUE(m == Matrix(2, data));
-}
-
-TEST(MatrixTestsLab3, StreamInputFailsOnNegativeDimension) {
-    std::istringstream ss("-3 1 2");
-    Matrix m(1);
-    ss >> m;
-    EXPECT_TRUE(ss.fail());
-    EXPECT_EQ(m.getDimension(), 1);
-}
-
-TEST(MatrixTestsLab3, StreamInputFailsOnTruncatedData) {
-    static const int data[4] = {1, 2, 3, 4};
-    std::istringstream ss("2 1 2 3");
-    Matrix m(2, data);
-    ss >> m;
-    EXPECT_TRUE(ss.fail());
-    EXPECT_TRUE(m == Matrix(2, data));
-}
-
-TEST(MatrixTestsLab3, StreamInputLoopStopsAtEndOfStream) {
-    static const int a[4] = {1, 2, 3, 4};
-    static const int b[9] = {2, 0, 1, 1, 3, 2, 3, 1, 4};
-    std::stringstream ss;
-    ss << Matrix(2, a) << Matrix(3, b);
-    int count = 0;
-    Matrix m;
-    while (ss >> m) {
-        ++count;
-    }
-    EXPECT_EQ(count, 2);
-}
-
-TEST(MatrixTestsLab3, BinaryRoundTripSingleMatrix) {
-    static const int data[9] = {2, 0, 1, 1, 3, 2, 3, 1, 4};
-    Matrix m(3, data);
-    std::stringstream ss;
-    m.saveBinary(ss);
-    Matrix r;
-    r.loadBinary(ss);
-    EXPECT_FALSE(ss.fail());
-    EXPECT_TRUE(r == m);
-}
-
-TEST(MatrixTestsLab3, BinaryRoundTripSeveralMatricesIncludingEmpty) {
-    static const int a[4] = {1, 2, 3, 4};
-    std::stringstream ss;
-    Matrix(2, a).saveBinary(ss);
-    Matrix().saveBinary(ss);
-    Matrix r1;
-    Matrix r2(3);
-    r1.loadBinary(ss);
-    r2.loadBinary(ss);
-    EXPECT_FALSE(ss.fail());
-    EXPECT_TRUE(r1 == Matrix(2, a));
-    EXPECT_EQ(r2.getDimension(), 0);
-}
-
-TEST(MatrixTestsLab3, BinaryLoadFailsAtEndOfStream) {
-    static const int a[4] = {1, 2, 3, 4};
-    std::stringstream ss;
-    Matrix(2, a).saveBinary(ss);
-    Matrix m;
-    m.loadBinary(ss);
-    ASSERT_FALSE(ss.fail());
-    Matrix extra;
-    extra.loadBinary(ss);
-    EXPECT_TRUE(ss.fail());
-}
-
-TEST(MatrixTestsLab3, TextFileSavesAndLoadsAnyNumberOfMatrices) {
-    static const int a[4] = {1, 2, 3, 4};
-    static const int b[9] = {2, 0, 1, 1, 3, 2, 3, 1, 4};
-    const char* path = "matrix_lab3_text_test.txt";
+//Лаба 3
+TEST(MatrixTestsLab3, StreamInputReads2x2Matrix) {
+    const char* path = "lab3_input.tmp";
     {
         std::ofstream out(path);
-        out << 2 << '\n';
-        out << Matrix(2, a) << Matrix(3, b);
+        out << "2\n1 2\n3 4\n";
     }
-    std::ifstream in(path);
-    int count = 0;
-    in >> count;
-    ASSERT_EQ(count, 2);
-    Matrix r1;
-    Matrix r2;
-    in >> r1 >> r2;
-    EXPECT_FALSE(in.fail());
-    EXPECT_TRUE(r1 == Matrix(2, a));
-    EXPECT_TRUE(r2 == Matrix(3, b));
+
+    Matrix m;
+    {
+        std::ifstream in(path);
+        in >> m;
+        ASSERT_FALSE(in.fail());
+    }
+
+    ASSERT_EQ(m.getDimension(), 2);
+    EXPECT_EQ(m.getElement(0, 0), 1);
+    EXPECT_EQ(m.getElement(0, 1), 2);
+    EXPECT_EQ(m.getElement(1, 0), 3);
+    EXPECT_EQ(m.getElement(1, 1), 4);
+
     std::remove(path);
 }
 
-TEST(MatrixTestsLab3, BinaryFileSavesAndLoadsAnyNumberOfMatrices) {
-    static const int a[4] = {1, 2, 3, 4};
-    const char* path = "matrix_lab3_bin_test.bin";
+TEST(MatrixTestsLab3, StreamInputReads3x3Matrix) {
+    const char* path = "lab3_input.tmp";
+    {
+        std::ofstream out(path);
+        out << "3\n2 0 1\n1 3 2\n3 1 4\n";
+    }
+
+    static const int data[9] = {2, 0, 1, 1, 3, 2, 3, 1, 4};
+    Matrix m;
+    {
+        std::ifstream in(path);
+        in >> m;
+        ASSERT_FALSE(in.fail());
+    }
+
+    ASSERT_EQ(m.getDimension(), 3);
+    EXPECT_TRUE(m == Matrix(3, data));
+
+    std::remove(path);
+}
+
+TEST(MatrixTestsLab3, StreamOutputWritesDimensionAndRows) {
+    const char* path = "lab3_output.tmp";
+    static const int data[4] = {1, 2, 3, 4};
+
+    {
+        std::ofstream out(path);
+        out << Matrix(2, data);
+        ASSERT_FALSE(out.fail());
+    }
+    {
+        std::ifstream in(path);
+        char line[64];
+
+        ASSERT_TRUE(static_cast<bool>(in.getline(line, sizeof(line))));
+        EXPECT_STREQ(line, "2");
+
+        ASSERT_TRUE(static_cast<bool>(in.getline(line, sizeof(line))));
+        EXPECT_STREQ(line, "1\t2");
+
+        ASSERT_TRUE(static_cast<bool>(in.getline(line, sizeof(line))));
+        EXPECT_STREQ(line, "3\t4");
+
+        EXPECT_EQ(in.peek(), std::char_traits<char>::eof());
+    }
+
+    std::remove(path);
+}
+
+TEST(MatrixTestsLab3, TextRoundTripPreservesAllElements) {
+    const char* path = "lab3_text.tmp";
+    static const int data[4] = {-1, 0, 3, -4};
+    Matrix original(2, data);
+
+    {
+        std::ofstream out(path);
+        out << original;
+        ASSERT_FALSE(out.fail());
+    }
+
+    Matrix restored(3);
+    {
+        std::ifstream in(path);
+        in >> restored;
+        ASSERT_FALSE(in.fail());
+    }
+
+    ASSERT_EQ(restored.getDimension(), 2);
+    EXPECT_TRUE(restored == original);
+
+    std::remove(path);
+}
+
+TEST(MatrixTestsLab3, TextFileAppendsAfterReopening) {
+    const char* path = "lab3_text_append.tmp";
+    static const int data[4] = {1, 2, 3, 4};
+    static const int data3[9] = {2, 0, 1, 1, 3, 2, 3, 1, 4};
+    Matrix a(2, data);
+    Matrix b(3, data3);
+
+    // Создаём пустой тестовый файл.
+    {
+        std::ofstream out(path);
+    }
+    {
+        std::ofstream out(path, std::ios::app);
+        out << a;
+        ASSERT_FALSE(out.fail());
+    }
+
+    // Повторно открываем файл и добавляем вторую матрицу.
+    {
+        std::ofstream out(path, std::ios::app);
+        out << b;
+        ASSERT_FALSE(out.fail());
+    }
+    {
+        std::ifstream in(path);
+        Matrix first;
+        Matrix second;
+
+        in >> first >> second;
+        ASSERT_FALSE(in.fail());
+
+        EXPECT_TRUE(first == a);
+        EXPECT_TRUE(second == b);
+
+        in >> std::ws;
+        EXPECT_EQ(in.peek(), std::char_traits<char>::eof());
+    }
+
+    std::remove(path);
+}
+
+TEST(MatrixTestsLab3, TextFileReadsManyMatrices) {
+    const char* path = "lab3_text_many.tmp";
+    static const int data[4] = {1, 2, 3, 4};
+    Matrix original(2, data);
+
+    {
+        std::ofstream out(path);
+    }
+    {
+        std::ofstream out(path, std::ios::app);
+        for (int i = 0; i < 25; ++i) out << original;
+        ASSERT_FALSE(out.fail());
+    }
+    {
+        std::ifstream in(path);
+        int count = 0;
+
+        while (true) {
+            in >> std::ws;
+            if (in.peek() == std::char_traits<char>::eof()) break;
+
+            Matrix restored;
+            in >> restored;
+            ASSERT_FALSE(in.fail());
+
+            EXPECT_TRUE(restored == original);
+            ++count;
+        }
+
+        EXPECT_EQ(count, 25);
+        EXPECT_FALSE(in.bad());
+    }
+
+    std::remove(path);
+}
+
+TEST(MatrixTestsLab3, BinaryRoundTripPreservesAllElements) {
+    const char* path = "lab3_binary.tmp";
+    static const int data[9] = {-2, 0, 1, 1, 3, -2, 3, 1, 4};
+    Matrix original(3, data);
+
     {
         std::ofstream out(path, std::ios::binary);
-        int count = 2;
-        out.write(reinterpret_cast<const char*>(&count), sizeof(count));
-        Matrix(2, a).saveBinary(out);
-        Matrix().saveBinary(out);
+        original.saveBinary(out);
+        ASSERT_FALSE(out.fail());
     }
-    std::ifstream in(path, std::ios::binary);
-    int count = 0;
-    in.read(reinterpret_cast<char*>(&count), sizeof(count));
-    ASSERT_EQ(count, 2);
-    Matrix r1;
-    Matrix r2;
-    r1.loadBinary(in);
-    r2.loadBinary(in);
-    EXPECT_FALSE(in.fail());
-    EXPECT_TRUE(r1 == Matrix(2, a));
-    EXPECT_EQ(r2.getDimension(), 0);
+
+    Matrix restored(2);
+    {
+        std::ifstream in(path, std::ios::binary);
+        restored.loadBinary(in);
+        ASSERT_FALSE(in.fail());
+    }
+
+    ASSERT_EQ(restored.getDimension(), 3);
+    EXPECT_TRUE(restored == original);
+
     std::remove(path);
+}
+
+TEST(MatrixTestsLab3, BinaryFileAppendsAfterReopening) {
+    const char* path = "lab3_binary_append.tmp";
+    static const int data[4] = {1, 2, 3, 4};
+    static const int data3[9] = {2, 0, 1, 1, 3, 2, 3, 1, 4};
+    Matrix a(2, data);
+    Matrix b(3, data3);
+
+    {
+        std::ofstream out(path, std::ios::binary);
+    }
+    {
+        std::ofstream out(path, std::ios::binary | std::ios::app);
+        a.saveBinary(out);
+        ASSERT_FALSE(out.fail());
+    }
+    {
+        std::ofstream out(path, std::ios::binary | std::ios::app);
+        b.saveBinary(out);
+        ASSERT_FALSE(out.fail());
+    }
+    {
+        std::ifstream in(path, std::ios::binary);
+        Matrix first;
+        Matrix second;
+
+        first.loadBinary(in);
+        second.loadBinary(in);
+        ASSERT_FALSE(in.fail());
+
+        EXPECT_TRUE(first == a);
+        EXPECT_TRUE(second == b);
+        EXPECT_EQ(in.peek(), std::char_traits<char>::eof());
+    }
+
+    std::remove(path);
+}
+
+TEST(MatrixTestsLab3, BinaryFileReadsManyMatrices) {
+    const char* path = "lab3_binary_many.tmp";
+    static const int data[4] = {1, 2, 3, 4};
+    Matrix original(2, data);
+
+    {
+        std::ofstream out(path, std::ios::binary);
+    }
+    {
+        std::ofstream out(path, std::ios::binary | std::ios::app);
+        for (int i = 0; i < 25; ++i) original.saveBinary(out);
+        ASSERT_FALSE(out.fail());
+    }
+    {
+        std::ifstream in(path, std::ios::binary);
+        int count = 0;
+
+        while (in.peek() != std::char_traits<char>::eof()) {
+            Matrix restored;
+            restored.loadBinary(in);
+            ASSERT_FALSE(in.fail());
+
+            EXPECT_TRUE(restored == original);
+            ++count;
+        }
+
+        EXPECT_EQ(count, 25);
+        EXPECT_FALSE(in.bad());
+    }
+
+    std::remove(path);
+}
+
+TEST(MatrixTestsLab3, TruncatedBinaryInputKeepsObjectUnchanged) {
+    const char* path = "lab3_bad_binary.tmp";
+    static const int record[5] = {2, 1, 2, 3, 4};
+    static const int data[4] = {9, 8, 7, 6};
+
+    // Проверяем каждое возможное усечение записи.
+    for (int bytes = 0; bytes < static_cast<int>(sizeof(record)); ++bytes) {
+        {
+            std::ofstream out(path, std::ios::binary);
+            out.write(reinterpret_cast<const char*>(record), bytes);
+        }
+
+        Matrix m(2, data);
+        {
+            std::ifstream in(path, std::ios::binary);
+            m.loadBinary(in);
+            EXPECT_TRUE(in.fail());
+        }
+
+        EXPECT_TRUE(m == Matrix(2, data));
+    }
+
+    std::remove(path);
+}
+
+TEST(MatrixTestsLab3, EmptyFilesContainNoMatrices) {
+    const char* path = "lab3_empty.tmp";
+    {
+        std::ofstream out(path, std::ios::binary);
+    }
+    {
+        std::ifstream in(path);
+        ASSERT_TRUE(in.is_open());
+
+        in >> std::ws;
+        EXPECT_EQ(in.peek(), std::char_traits<char>::eof());
+        EXPECT_FALSE(in.bad());
+    }
+    {
+        std::ifstream in(path, std::ios::binary);
+        ASSERT_TRUE(in.is_open());
+
+        EXPECT_EQ(in.peek(), std::char_traits<char>::eof());
+        EXPECT_FALSE(in.bad());
+    }
+
+    std::remove(path);
+}
+
+TEST(MatrixTestsLab3, MissingFileFailsToOpen) {
+    const char* path = "lab3_missing.tmp";
+    {
+        std::ofstream out(path);
+    }
+    ASSERT_EQ(std::remove(path), 0);
+
+    {
+        std::ifstream in(path);
+        EXPECT_FALSE(in.is_open());
+        EXPECT_TRUE(in.fail());
+    }
+    {
+        std::ifstream in(path, std::ios::binary);
+        EXPECT_FALSE(in.is_open());
+        EXPECT_TRUE(in.fail());
+    }
 }
