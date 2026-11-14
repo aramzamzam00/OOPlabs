@@ -40,9 +40,25 @@ class Matrix {
         
         int operator()() const;
 
-        //Лаба 3
-        void saveBinary(std::ostream& ostream) const;
-        void loadBinary(std::istream& istream);
+        // Лабораторная № 3: работа с потоками
+        void saveBinary(std::ostream& out) const;
+        void loadBinary(std::istream& in);
+
+        bool readMatrix();
+
+        bool saveTextMatrix() const;
+        bool saveBinaryMatrix() const;
+
+        bool loadTextMatrix(int recordNumber);
+        bool loadBinaryMatrix(int recordNumber);
+
+        // Загрузка всех записей:
+        static Matrix* loadTextMatrices(int& count);
+        static Matrix* loadBinaryMatrices(int& count);
+
+        static void printMatrices(const Matrix* matrices, int count);
+        static void deleteMatrices(Matrix*& matrices, int& count);
+
 
     private:
         int dimension;

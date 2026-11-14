@@ -1,7 +1,8 @@
 #include <stdexcept>
 #include <gtest/gtest.h>
-#include "Matrix.h"
+#include "matrix.h"
 #include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <cstdio>
 
@@ -423,338 +424,1005 @@ TEST(MatrixTestsLab2, MoveAssignmentLeavesSourceEmpty) {
     EXPECT_EQ(k.getElement(0, 0), 1);
     EXPECT_EQ(m.getDimension(), 0);
 }
-//Лаба 3
-TEST(MatrixTestsLab3, StreamInputReads2x2Matrix) {
-    const char* path = "lab3_input.tmp";
-    {
-        std::ofstream out(path);
-        out << "2\n1 2\n3 4\n";
-    }
-
-    Matrix m;
-    {
-        std::ifstream in(path);
-        in >> m;
-        ASSERT_FALSE(in.fail());
-    }
-
-    ASSERT_EQ(m.getDimension(), 2);
-    EXPECT_EQ(m.getElement(0, 0), 1);
-    EXPECT_EQ(m.getElement(0, 1), 2);
-    EXPECT_EQ(m.getElement(1, 0), 3);
-    EXPECT_EQ(m.getElement(1, 1), 4);
-
-    std::remove(path);
-}
-
-TEST(MatrixTestsLab3, StreamInputReads3x3Matrix) {
-    const char* path = "lab3_input.tmp";
-    {
-        std::ofstream out(path);
-        out << "3\n2 0 1\n1 3 2\n3 1 4\n";
-    }
-
-    static const int data[9] = {2, 0, 1, 1, 3, 2, 3, 1, 4};
-    Matrix m;
-    {
-        std::ifstream in(path);
-        in >> m;
-        ASSERT_FALSE(in.fail());
-    }
-
-    ASSERT_EQ(m.getDimension(), 3);
-    EXPECT_TRUE(m == Matrix(3, data));
-
-    std::remove(path);
-}
-
-TEST(MatrixTestsLab3, StreamOutputWritesDimensionAndRows) {
-    const char* path = "lab3_output.tmp";
-    static const int data[4] = {1, 2, 3, 4};
-
-    {
-        std::ofstream out(path);
-        out << Matrix(2, data);
-        ASSERT_FALSE(out.fail());
-    }
-    {
-        std::ifstream in(path);
-        char line[64];
-
-        ASSERT_TRUE(static_cast<bool>(in.getline(line, sizeof(line))));
-        EXPECT_STREQ(line, "2");
-
-        ASSERT_TRUE(static_cast<bool>(in.getline(line, sizeof(line))));
-        EXPECT_STREQ(line, "1\t2");
-
-        ASSERT_TRUE(static_cast<bool>(in.getline(line, sizeof(line))));
-        EXPECT_STREQ(line, "3\t4");
-
-        EXPECT_EQ(in.peek(), std::char_traits<char>::eof());
-    }
-
-    std::remove(path);
-}
-
-TEST(MatrixTestsLab3, TextRoundTripPreservesAllElements) {
-    const char* path = "lab3_text.tmp";
+TEST(MatrixTestsLab3, TextLoadsExistingFileWithoutSavingAndPreservesBytes) {
+    const char* path = "matrices.txt";
     static const int data[4] = {-1, 0, 3, -4};
-    Matrix original(2, data);
 
+    // Создаём файл без вызова методов сохранения Matrix.
     {
         std::ofstream out(path);
-        out << original;
+        out << "2\n-1 0\n3 -4";
         ASSERT_FALSE(out.fail());
+    }
+
+    std::string before;
+    {
+        std::ifstream in(path, std::ios::binary);
+        before.assign(std::istreambuf_iterator<char>(in), {});
     }
 
     Matrix restored(3);
-    {
-        std::ifstream in(path);
-        in >> restored;
-        ASSERT_FALSE(in.fail());
+
+    ASSERT_TRUE(restored.loadTextMatrix(1));
+    ASSERT_EQ(restored.getDimension(), 2);
+    EXPECT_TRUE(restored == Matrix(2, data));
+
+    EXPECT_TRUE(
+        restored.multiplyByNumber(2) ==
+        Matrix(2, data).multiplyByNumber(2)
+    );
+
+    EXPECT_EQ(restored(), 4);
+
+    int count = 0;
+    Matrix* matrices = Matrix::loadTextMatrices(count);
+
+    EXPECT_EQ(count, 1);
+
+    if (matrices && count == 1) {
+        EXPECT_TRUE(matrices[0] == restored);
     }
 
-    ASSERT_EQ(restored.getDimension(), 2);
-    EXPECT_TRUE(restored == original);
+    Matrix::deleteMatrices(matrices, count);
+
+    {
+        std::ifstream in(path, std::ios::binary);
+        std::string after(std::istreambuf_iterator<char>(in), {});
+
+        EXPECT_EQ(after, before);
+    }
 
     std::remove(path);
 }
 
-TEST(MatrixTestsLab3, TextFileAppendsAfterReopening) {
-    const char* path = "lab3_text_append.tmp";
+TEST(MatrixTestsLab3, TextMethodsAppendDifferentOrdersAndLoadByNumber) {
+    const char* path = "matrices.txt";
     static const int data[4] = {1, 2, 3, 4};
     static const int data3[9] = {2, 0, 1, 1, 3, 2, 3, 1, 4};
+
     Matrix a(2, data);
     Matrix b(3, data3);
 
-    // Создаём пустой тестовый файл.
     {
         std::ofstream out(path);
+        ASSERT_TRUE(out.is_open());
     }
+
+    ASSERT_TRUE(a.saveTextMatrix());
+
+    std::string prefix;
     {
-        std::ofstream out(path, std::ios::app);
-        out << a;
-        ASSERT_FALSE(out.fail());
+        std::ifstream in(path, std::ios::binary);
+        prefix.assign(std::istreambuf_iterator<char>(in), {});
     }
 
-    // Повторно открываем файл и добавляем вторую матрицу.
+    ASSERT_TRUE(b.saveTextMatrix());
+
     {
-        std::ofstream out(path, std::ios::app);
-        out << b;
-        ASSERT_FALSE(out.fail());
+        std::ifstream in(path, std::ios::binary);
+        std::string contents(std::istreambuf_iterator<char>(in), {});
+
+        EXPECT_EQ(contents.substr(0, prefix.size()), prefix);
     }
-    {
-        std::ifstream in(path);
-        Matrix first;
-        Matrix second;
 
-        in >> first >> second;
-        ASSERT_FALSE(in.fail());
+    Matrix restored;
 
-        EXPECT_TRUE(first == a);
-        EXPECT_TRUE(second == b);
+    ASSERT_TRUE(restored.loadTextMatrix(2));
+    EXPECT_TRUE(restored == b);
 
-        in >> std::ws;
-        EXPECT_EQ(in.peek(), std::char_traits<char>::eof());
+    ASSERT_TRUE(restored.loadTextMatrix(1));
+    EXPECT_TRUE(restored == a);
+
+    int count = 0;
+    Matrix* matrices = Matrix::loadTextMatrices(count);
+
+    EXPECT_EQ(count, 2);
+
+    if (matrices && count == 2) {
+        EXPECT_TRUE(matrices[0] == a);
+        EXPECT_TRUE(matrices[1] == b);
     }
+
+    Matrix::deleteMatrices(matrices, count);
+
+    EXPECT_TRUE(matrices == nullptr);
+    EXPECT_EQ(count, 0);
 
     std::remove(path);
 }
 
-TEST(MatrixTestsLab3, TextFileReadsManyMatrices) {
-    const char* path = "lab3_text_many.tmp";
-    static const int data[4] = {1, 2, 3, 4};
-    Matrix original(2, data);
+TEST(MatrixTestsLab3, TextMethodsLoadManyMatricesInOrder) {
+    const char* path = "matrices.txt";
 
     {
         std::ofstream out(path);
+        ASSERT_TRUE(out.is_open());
     }
-    {
-        std::ofstream out(path, std::ios::app);
-        for (int i = 0; i < 25; ++i) out << original;
-        ASSERT_FALSE(out.fail());
+
+    for (int i = 0; i < 25; ++i) {
+        Matrix original(1, &i);
+        ASSERT_TRUE(original.saveTextMatrix());
     }
-    {
-        std::ifstream in(path);
-        int count = 0;
 
-        while (true) {
-            in >> std::ws;
-            if (in.peek() == std::char_traits<char>::eof()) break;
+    int count = 0;
+    Matrix* matrices = Matrix::loadTextMatrices(count);
 
-            Matrix restored;
-            in >> restored;
-            ASSERT_FALSE(in.fail());
+    EXPECT_EQ(count, 25);
 
-            EXPECT_TRUE(restored == original);
-            ++count;
+    if (matrices && count == 25) {
+        for (int i = 0; i < count; ++i) {
+            EXPECT_EQ(matrices[i].getElement(0, 0), i);
         }
-
-        EXPECT_EQ(count, 25);
-        EXPECT_FALSE(in.bad());
     }
+
+    Matrix::deleteMatrices(matrices, count);
 
     std::remove(path);
 }
 
-TEST(MatrixTestsLab3, BinaryRoundTripPreservesAllElements) {
-    const char* path = "lab3_binary.tmp";
-    static const int data[9] = {-2, 0, 1, 1, 3, -2, 3, 1, 4};
-    Matrix original(3, data);
+TEST(MatrixTestsLab3, TextMethodsReportMissingFileWithoutCreatingIt) {
+    const char* path = "matrices.txt";
 
     {
-        std::ofstream out(path, std::ios::binary);
-        original.saveBinary(out);
-        ASSERT_FALSE(out.fail());
+        std::ofstream out(path);
+        ASSERT_TRUE(out.is_open());
     }
+
+    ASSERT_EQ(std::remove(path), 0);
 
     Matrix restored(2);
+    Matrix before(restored);
+
+    EXPECT_FALSE(restored.loadTextMatrix(1));
+    EXPECT_TRUE(restored == before);
+
+    int count = 42;
+    Matrix* matrices = Matrix::loadTextMatrices(count);
+
+    EXPECT_TRUE(matrices == nullptr);
+    EXPECT_EQ(count, -1);
+
+    Matrix::deleteMatrices(matrices, count);
+
     {
-        std::ifstream in(path, std::ios::binary);
-        restored.loadBinary(in);
-        ASSERT_FALSE(in.fail());
+        std::ifstream in(path);
+        EXPECT_FALSE(in.is_open());
     }
-
-    ASSERT_EQ(restored.getDimension(), 3);
-    EXPECT_TRUE(restored == original);
-
-    std::remove(path);
 }
 
-TEST(MatrixTestsLab3, BinaryFileAppendsAfterReopening) {
-    const char* path = "lab3_binary_append.tmp";
-    static const int data[4] = {1, 2, 3, 4};
-    static const int data3[9] = {2, 0, 1, 1, 3, 2, 3, 1, 4};
-    Matrix a(2, data);
-    Matrix b(3, data3);
+TEST(MatrixTestsLab3, TextMethodsTreatEmptyFileAsZeroRecords) {
+    const char* path = "matrices.txt";
 
     {
-        std::ofstream out(path, std::ios::binary);
+        std::ofstream out(path);
+        ASSERT_TRUE(out.is_open());
     }
-    {
-        std::ofstream out(path, std::ios::binary | std::ios::app);
-        a.saveBinary(out);
-        ASSERT_FALSE(out.fail());
-    }
-    {
-        std::ofstream out(path, std::ios::binary | std::ios::app);
-        b.saveBinary(out);
-        ASSERT_FALSE(out.fail());
-    }
-    {
-        std::ifstream in(path, std::ios::binary);
-        Matrix first;
-        Matrix second;
 
-        first.loadBinary(in);
-        second.loadBinary(in);
-        ASSERT_FALSE(in.fail());
+    int count = 42;
+    Matrix* matrices = Matrix::loadTextMatrices(count);
 
-        EXPECT_TRUE(first == a);
-        EXPECT_TRUE(second == b);
+    EXPECT_TRUE(matrices == nullptr);
+    EXPECT_EQ(count, 0);
+
+    Matrix::deleteMatrices(matrices, count);
+
+    Matrix restored(2);
+    Matrix before(restored);
+
+    EXPECT_FALSE(restored.loadTextMatrix(1));
+    EXPECT_TRUE(restored == before);
+
+    {
+        std::ifstream in(path);
+
         EXPECT_EQ(in.peek(), std::char_traits<char>::eof());
-    }
-
-    std::remove(path);
-}
-
-TEST(MatrixTestsLab3, BinaryFileReadsManyMatrices) {
-    const char* path = "lab3_binary_many.tmp";
-    static const int data[4] = {1, 2, 3, 4};
-    Matrix original(2, data);
-
-    {
-        std::ofstream out(path, std::ios::binary);
-    }
-    {
-        std::ofstream out(path, std::ios::binary | std::ios::app);
-        for (int i = 0; i < 25; ++i) original.saveBinary(out);
-        ASSERT_FALSE(out.fail());
-    }
-    {
-        std::ifstream in(path, std::ios::binary);
-        int count = 0;
-
-        while (in.peek() != std::char_traits<char>::eof()) {
-            Matrix restored;
-            restored.loadBinary(in);
-            ASSERT_FALSE(in.fail());
-
-            EXPECT_TRUE(restored == original);
-            ++count;
-        }
-
-        EXPECT_EQ(count, 25);
         EXPECT_FALSE(in.bad());
     }
 
     std::remove(path);
 }
 
-TEST(MatrixTestsLab3, TruncatedBinaryInputKeepsObjectUnchanged) {
-    const char* path = "lab3_bad_binary.tmp";
-    static const int record[5] = {2, 1, 2, 3, 4};
-    static const int data[4] = {9, 8, 7, 6};
+TEST(MatrixTestsLab3, TextInvalidRecordNumbersKeepObjectAndFileUnchanged) {
+    const char* path = "matrices.txt";
 
-    // Проверяем каждое возможное усечение записи.
-    for (int bytes = 0; bytes < static_cast<int>(sizeof(record)); ++bytes) {
+    {
+        std::ofstream out(path);
+        ASSERT_TRUE(out.is_open());
+    }
+
+    Matrix original(2);
+    ASSERT_TRUE(original.saveTextMatrix());
+
+    std::string beforeFile;
+    {
+        std::ifstream in(path, std::ios::binary);
+        beforeFile.assign(std::istreambuf_iterator<char>(in), {});
+    }
+
+    for (int record : {-1, 0, 2, std::numeric_limits<int>::max()}) {
+        Matrix restored(3);
+        Matrix before(restored);
+
+        EXPECT_FALSE(restored.loadTextMatrix(record));
+        EXPECT_TRUE(restored == before);
+    }
+
+    {
+        std::ifstream in(path, std::ios::binary);
+        std::string after(std::istreambuf_iterator<char>(in), {});
+
+        EXPECT_EQ(after, beforeFile);
+    }
+
+    std::remove(path);
+}
+
+TEST(MatrixTestsLab3, TextFileRejectsInvalidDimensions) {
+    const char* path = "matrices.txt";
+
+    for (int dimension : {-2, 0, 46341, std::numeric_limits<int>::max()}) {
         {
-            std::ofstream out(path, std::ios::binary);
-            out.write(reinterpret_cast<const char*>(record), bytes);
+            std::ofstream out(path);
+            out << dimension << '\n';
+            ASSERT_FALSE(out.fail());
         }
 
-        Matrix m(2, data);
+        Matrix restored(2);
+        Matrix before(restored);
+
+        EXPECT_FALSE(restored.loadTextMatrix(1));
+        EXPECT_TRUE(restored == before);
+
+        int count = 0;
+        Matrix* matrices = Matrix::loadTextMatrices(count);
+
+        EXPECT_TRUE(matrices == nullptr);
+        EXPECT_EQ(count, -1);
+
+        Matrix::deleteMatrices(matrices, count);
+    }
+
+    std::remove(path);
+}
+
+TEST(MatrixTestsLab3, TextLargeIncompleteRecordIsRejectedBeforeAllocation) {
+    const char* path = "matrices.txt";
+    const int dimension = 46340;
+
+    {
+        std::ofstream out(path);
+        out << dimension << '\n';
+        ASSERT_FALSE(out.fail());
+    }
+
+    Matrix restored(1);
+    Matrix before(restored);
+
+    EXPECT_FALSE(restored.loadTextMatrix(1));
+    EXPECT_TRUE(restored == before);
+
+    int count = 0;
+    Matrix* matrices = Matrix::loadTextMatrices(count);
+
+    EXPECT_TRUE(matrices == nullptr);
+    EXPECT_EQ(count, -1);
+
+    Matrix::deleteMatrices(matrices, count);
+
+    std::remove(path);
+}
+
+TEST(MatrixTestsLab3, TextFileMethodsRejectTruncatedHeadersAndMissingElements) {
+    const char* path = "matrices.txt";
+    const std::string record = "2\n111 -222 333 -444\n";
+
+    // Проверяем префиксы до знака последнего числа включительно.
+    // Обрыв внутри числа может оставить другое допустимое целое.
+    for (std::size_t length = 1;
+         length <= record.rfind('-') + 1;
+         ++length) {
         {
-            std::ifstream in(path, std::ios::binary);
-            m.loadBinary(in);
+            std::ofstream out(path);
+
+            out.write(
+                record.data(),
+                static_cast<std::streamsize>(length)
+            );
+
+            ASSERT_FALSE(out.fail());
+        }
+
+        Matrix restored(3);
+        Matrix before(restored);
+
+        EXPECT_FALSE(restored.loadTextMatrix(1)) << length;
+        EXPECT_TRUE(restored == before);
+
+        int count = 0;
+        Matrix* matrices = Matrix::loadTextMatrices(count);
+
+        EXPECT_TRUE(matrices == nullptr);
+        EXPECT_EQ(count, -1);
+
+        Matrix::deleteMatrices(matrices, count);
+    }
+
+    std::remove(path);
+}
+
+TEST(MatrixTestsLab3, TextCorruptLaterRecordDoesNotReturnPartialArray) {
+    const char* path = "matrices.txt";
+
+    {
+        std::ofstream out(path);
+        ASSERT_TRUE(out.is_open());
+    }
+
+    Matrix original(2);
+    ASSERT_TRUE(original.saveTextMatrix());
+
+    {
+        std::ofstream out(path, std::ios::app);
+        out << "garbage";
+        ASSERT_FALSE(out.fail());
+    }
+
+    std::string beforeFile;
+    {
+        std::ifstream in(path, std::ios::binary);
+        beforeFile.assign(std::istreambuf_iterator<char>(in), {});
+    }
+
+    int count = 0;
+    Matrix* matrices = Matrix::loadTextMatrices(count);
+
+    EXPECT_TRUE(matrices == nullptr);
+    EXPECT_EQ(count, -1);
+
+    Matrix::deleteMatrices(matrices, count);
+
+    Matrix restored(3);
+    Matrix before(restored);
+
+    EXPECT_FALSE(restored.loadTextMatrix(2));
+    EXPECT_TRUE(restored == before);
+
+    {
+        std::ifstream in(path, std::ios::binary);
+        std::string after(std::istreambuf_iterator<char>(in), {});
+
+        EXPECT_EQ(after, beforeFile);
+    }
+
+    std::remove(path);
+}
+
+TEST(MatrixTestsLab3, TextEmptyMatrixIsNotSavedAndWriteFailureIsReported) {
+    const char* path = "matrices.txt";
+
+    std::remove(path);
+
+    Matrix empty;
+    EXPECT_FALSE(empty.saveTextMatrix());
+
+    {
+        std::ifstream in(path);
+        EXPECT_FALSE(in.is_open());
+    }
+
+    // Каталог с именем файла нельзя открыть для записи как обычный файл.
+    ASSERT_TRUE(std::filesystem::create_directory(path));
+
+    Matrix original(2);
+    EXPECT_FALSE(original.saveTextMatrix());
+
+    EXPECT_TRUE(std::filesystem::remove(path));
+}
+
+TEST(MatrixTestsLab3, TextDirectoryCannotBeLoadedAsMatrixFile) {
+    const char* path = "matrices.txt";
+
+    std::remove(path);
+
+    ASSERT_TRUE(std::filesystem::create_directory(path));
+
+    Matrix restored(2);
+    Matrix before(restored);
+
+    EXPECT_FALSE(restored.loadTextMatrix(1));
+    EXPECT_TRUE(restored == before);
+
+    int count = 0;
+    Matrix* matrices = Matrix::loadTextMatrices(count);
+
+    EXPECT_TRUE(matrices == nullptr);
+    EXPECT_EQ(count, -1);
+
+    Matrix::deleteMatrices(matrices, count);
+
+    EXPECT_TRUE(std::filesystem::remove(path));
+}
+
+TEST(MatrixTestsLab3, TextAppendsAfterPreexistingRecordWithoutTrailingWhitespace) {
+    const char* path = "matrices.txt";
+
+    {
+        std::ofstream out(path);
+        out << "1 7";
+        ASSERT_FALSE(out.fail());
+    }
+
+    const int value = 9;
+    Matrix original(1, &value);
+
+    ASSERT_TRUE(original.saveTextMatrix());
+
+    int count = 0;
+    Matrix* matrices = Matrix::loadTextMatrices(count);
+
+    EXPECT_EQ(count, 2);
+
+    if (matrices && count == 2) {
+        EXPECT_EQ(matrices[0].getElement(0, 0), 7);
+        EXPECT_EQ(matrices[1].getElement(0, 0), 9);
+    }
+
+    Matrix::deleteMatrices(matrices, count);
+
+    std::remove(path);
+}
+
+// Двоичный файл
+
+TEST(MatrixTestsLab3, BinaryLoadsExistingFileWithoutSavingAndPreservesBytes) {
+    const char* path = "matrices.bin";
+    static const int data[4] = {-1, 0, 3, -4};
+    static const int record[5] = {2, -1, 0, 3, -4};
+
+    // Создаём файл без вызова методов сохранения Matrix.
+    {
+        std::ofstream out(path, std::ios::binary);
+
+        out.write(
+            reinterpret_cast<const char*>(record),
+            sizeof(record)
+        );
+
+        ASSERT_FALSE(out.fail());
+    }
+
+    std::string before;
+    {
+        std::ifstream in(path, std::ios::binary);
+        before.assign(std::istreambuf_iterator<char>(in), {});
+    }
+
+    Matrix restored(3);
+
+    ASSERT_TRUE(restored.loadBinaryMatrix(1));
+    ASSERT_EQ(restored.getDimension(), 2);
+    EXPECT_TRUE(restored == Matrix(2, data));
+
+    EXPECT_TRUE(
+        restored.multiplyByNumber(2) ==
+        Matrix(2, data).multiplyByNumber(2)
+    );
+
+    EXPECT_EQ(restored(), 4);
+
+    int count = 0;
+    Matrix* matrices = Matrix::loadBinaryMatrices(count);
+
+    EXPECT_EQ(count, 1);
+
+    if (matrices && count == 1) {
+        EXPECT_TRUE(matrices[0] == restored);
+    }
+
+    Matrix::deleteMatrices(matrices, count);
+
+    {
+        std::ifstream in(path, std::ios::binary);
+        std::string after(std::istreambuf_iterator<char>(in), {});
+
+        EXPECT_EQ(after, before);
+    }
+
+    std::remove(path);
+}
+
+TEST(MatrixTestsLab3, BinaryMethodsAppendDifferentOrdersAndLoadByNumber) {
+    const char* path = "matrices.bin";
+    static const int data[4] = {1, 2, 3, 4};
+    static const int data3[9] = {2, 0, 1, 1, 3, 2, 3, 1, 4};
+
+    Matrix a(2, data);
+    Matrix b(3, data3);
+
+    {
+        std::ofstream out(path, std::ios::binary);
+        ASSERT_TRUE(out.is_open());
+    }
+
+    ASSERT_TRUE(a.saveBinaryMatrix());
+
+    std::string prefix;
+    {
+        std::ifstream in(path, std::ios::binary);
+        prefix.assign(std::istreambuf_iterator<char>(in), {});
+    }
+
+    ASSERT_TRUE(b.saveBinaryMatrix());
+
+    {
+        std::ifstream in(path, std::ios::binary);
+        std::string contents(std::istreambuf_iterator<char>(in), {});
+
+        EXPECT_EQ(contents.substr(0, prefix.size()), prefix);
+    }
+
+    Matrix restored;
+
+    ASSERT_TRUE(restored.loadBinaryMatrix(2));
+    EXPECT_TRUE(restored == b);
+
+    ASSERT_TRUE(restored.loadBinaryMatrix(1));
+    EXPECT_TRUE(restored == a);
+
+    int count = 0;
+    Matrix* matrices = Matrix::loadBinaryMatrices(count);
+
+    EXPECT_EQ(count, 2);
+
+    if (matrices && count == 2) {
+        EXPECT_TRUE(matrices[0] == a);
+        EXPECT_TRUE(matrices[1] == b);
+    }
+
+    Matrix::deleteMatrices(matrices, count);
+
+    EXPECT_TRUE(matrices == nullptr);
+    EXPECT_EQ(count, 0);
+
+    std::remove(path);
+}
+
+TEST(MatrixTestsLab3, BinaryMethodsLoadManyMatricesInOrder) {
+    const char* path = "matrices.bin";
+
+    {
+        std::ofstream out(path, std::ios::binary);
+        ASSERT_TRUE(out.is_open());
+    }
+
+    for (int i = 0; i < 25; ++i) {
+        Matrix original(1, &i);
+        ASSERT_TRUE(original.saveBinaryMatrix());
+    }
+
+    int count = 0;
+    Matrix* matrices = Matrix::loadBinaryMatrices(count);
+
+    EXPECT_EQ(count, 25);
+
+    if (matrices && count == 25) {
+        for (int i = 0; i < count; ++i) {
+            EXPECT_EQ(matrices[i].getElement(0, 0), i);
+        }
+    }
+
+    Matrix::deleteMatrices(matrices, count);
+
+    std::remove(path);
+}
+
+TEST(MatrixTestsLab3, BinaryMethodsReportMissingFileWithoutCreatingIt) {
+    const char* path = "matrices.bin";
+
+    {
+        std::ofstream out(path, std::ios::binary);
+        ASSERT_TRUE(out.is_open());
+    }
+
+    ASSERT_EQ(std::remove(path), 0);
+
+    Matrix restored(2);
+    Matrix before(restored);
+
+    EXPECT_FALSE(restored.loadBinaryMatrix(1));
+    EXPECT_TRUE(restored == before);
+
+    int count = 42;
+    Matrix* matrices = Matrix::loadBinaryMatrices(count);
+
+    EXPECT_TRUE(matrices == nullptr);
+    EXPECT_EQ(count, -1);
+
+    Matrix::deleteMatrices(matrices, count);
+
+    {
+        std::ifstream in(path, std::ios::binary);
+        EXPECT_FALSE(in.is_open());
+    }
+}
+
+TEST(MatrixTestsLab3, BinaryMethodsTreatEmptyFileAsZeroRecords) {
+    const char* path = "matrices.bin";
+
+    {
+        std::ofstream out(path, std::ios::binary);
+        ASSERT_TRUE(out.is_open());
+    }
+
+    int count = 42;
+    Matrix* matrices = Matrix::loadBinaryMatrices(count);
+
+    EXPECT_TRUE(matrices == nullptr);
+    EXPECT_EQ(count, 0);
+
+    Matrix::deleteMatrices(matrices, count);
+
+    Matrix restored(2);
+    Matrix before(restored);
+
+    EXPECT_FALSE(restored.loadBinaryMatrix(1));
+    EXPECT_TRUE(restored == before);
+
+    {
+        std::ifstream in(path, std::ios::binary);
+
+        EXPECT_EQ(in.peek(), std::char_traits<char>::eof());
+        EXPECT_FALSE(in.bad());
+    }
+
+    std::remove(path);
+}
+
+TEST(MatrixTestsLab3, BinaryInvalidRecordNumbersKeepObjectAndFileUnchanged) {
+    const char* path = "matrices.bin";
+
+    {
+        std::ofstream out(path, std::ios::binary);
+        ASSERT_TRUE(out.is_open());
+    }
+
+    Matrix original(2);
+    ASSERT_TRUE(original.saveBinaryMatrix());
+
+    std::string beforeFile;
+    {
+        std::ifstream in(path, std::ios::binary);
+        beforeFile.assign(std::istreambuf_iterator<char>(in), {});
+    }
+
+    for (int record : {-1, 0, 2, std::numeric_limits<int>::max()}) {
+        Matrix restored(3);
+        Matrix before(restored);
+
+        EXPECT_FALSE(restored.loadBinaryMatrix(record));
+        EXPECT_TRUE(restored == before);
+    }
+
+    {
+        std::ifstream in(path, std::ios::binary);
+        std::string after(std::istreambuf_iterator<char>(in), {});
+
+        EXPECT_EQ(after, beforeFile);
+    }
+
+    std::remove(path);
+}
+
+TEST(MatrixTestsLab3, BinaryFileRejectsInvalidDimensions) {
+    const char* path = "matrices.bin";
+
+    for (int dimension : {-2, 0, 46341, std::numeric_limits<int>::max()}) {
+        {
+            std::ofstream out(path, std::ios::binary);
+
+            out.write(
+                reinterpret_cast<const char*>(&dimension),
+                sizeof(dimension)
+            );
+
+            ASSERT_FALSE(out.fail());
+        }
+
+        Matrix restored(2);
+        Matrix before(restored);
+
+        EXPECT_FALSE(restored.loadBinaryMatrix(1));
+        EXPECT_TRUE(restored == before);
+
+        int count = 0;
+        Matrix* matrices = Matrix::loadBinaryMatrices(count);
+
+        EXPECT_TRUE(matrices == nullptr);
+        EXPECT_EQ(count, -1);
+
+        Matrix::deleteMatrices(matrices, count);
+    }
+
+    std::remove(path);
+}
+
+TEST(MatrixTestsLab3, BinaryLargeIncompleteRecordIsRejectedBeforeAllocation) {
+    const char* path = "matrices.bin";
+    const int dimension = 46340;
+
+    {
+        std::ofstream out(path, std::ios::binary);
+
+        out.write(
+            reinterpret_cast<const char*>(&dimension),
+            sizeof(dimension)
+        );
+
+        ASSERT_FALSE(out.fail());
+    }
+
+    Matrix restored(1);
+    Matrix before(restored);
+
+    EXPECT_FALSE(restored.loadBinaryMatrix(1));
+    EXPECT_TRUE(restored == before);
+
+    int count = 0;
+    Matrix* matrices = Matrix::loadBinaryMatrices(count);
+
+    EXPECT_TRUE(matrices == nullptr);
+    EXPECT_EQ(count, -1);
+
+    Matrix::deleteMatrices(matrices, count);
+
+    std::remove(path);
+}
+
+TEST(MatrixTestsLab3, BinaryFileMethodsRejectEveryTruncatedRecord) {
+    const char* path = "matrices.bin";
+    static const int record[5] = {2, 111, -222, 333, -444};
+
+    for (int bytes = 1; bytes < static_cast<int>(sizeof(record)); ++bytes) {
+        {
+            std::ofstream out(path, std::ios::binary);
+
+            out.write(
+                reinterpret_cast<const char*>(record),
+                bytes
+            );
+
+            ASSERT_FALSE(out.fail());
+        }
+
+        Matrix restored(3);
+        Matrix before(restored);
+
+        EXPECT_FALSE(restored.loadBinaryMatrix(1)) << bytes;
+        EXPECT_TRUE(restored == before);
+
+        int count = 0;
+        Matrix* matrices = Matrix::loadBinaryMatrices(count);
+
+        EXPECT_TRUE(matrices == nullptr);
+        EXPECT_EQ(count, -1);
+
+        Matrix::deleteMatrices(matrices, count);
+    }
+
+    std::remove(path);
+}
+
+TEST(MatrixTestsLab3, BinaryCorruptLaterRecordDoesNotReturnPartialArray) {
+    const char* path = "matrices.bin";
+
+    {
+        std::ofstream out(path, std::ios::binary);
+        ASSERT_TRUE(out.is_open());
+    }
+
+    Matrix original(2);
+    ASSERT_TRUE(original.saveBinaryMatrix());
+
+    {
+        std::ofstream out(
+            path,
+            std::ios::binary | std::ios::app
+        );
+
+        out.put('\x7f');
+        ASSERT_FALSE(out.fail());
+    }
+
+    std::string beforeFile;
+    {
+        std::ifstream in(path, std::ios::binary);
+        beforeFile.assign(std::istreambuf_iterator<char>(in), {});
+    }
+
+    int count = 0;
+    Matrix* matrices = Matrix::loadBinaryMatrices(count);
+
+    EXPECT_TRUE(matrices == nullptr);
+    EXPECT_EQ(count, -1);
+
+    Matrix::deleteMatrices(matrices, count);
+
+    Matrix restored(3);
+    Matrix before(restored);
+
+    EXPECT_FALSE(restored.loadBinaryMatrix(2));
+    EXPECT_TRUE(restored == before);
+
+    {
+        std::ifstream in(path, std::ios::binary);
+        std::string after(std::istreambuf_iterator<char>(in), {});
+
+        EXPECT_EQ(after, beforeFile);
+    }
+
+    std::remove(path);
+}
+
+TEST(MatrixTestsLab3, BinaryEmptyMatrixIsNotSavedAndWriteFailureIsReported) {
+    const char* path = "matrices.bin";
+
+    std::remove(path);
+
+    Matrix empty;
+    EXPECT_FALSE(empty.saveBinaryMatrix());
+
+    {
+        std::ifstream in(path, std::ios::binary);
+        EXPECT_FALSE(in.is_open());
+    }
+
+    // Каталог с именем файла нельзя открыть для записи как обычный файл.
+    ASSERT_TRUE(std::filesystem::create_directory(path));
+
+    Matrix original(2);
+    EXPECT_FALSE(original.saveBinaryMatrix());
+
+    EXPECT_TRUE(std::filesystem::remove(path));
+}
+
+TEST(MatrixTestsLab3, BinaryDirectoryCannotBeLoadedAsMatrixFile) {
+    const char* path = "matrices.bin";
+
+    std::remove(path);
+
+    ASSERT_TRUE(std::filesystem::create_directory(path));
+
+    Matrix restored(2);
+    Matrix before(restored);
+
+    EXPECT_FALSE(restored.loadBinaryMatrix(1));
+    EXPECT_TRUE(restored == before);
+
+    int count = 0;
+    Matrix* matrices = Matrix::loadBinaryMatrices(count);
+
+    EXPECT_TRUE(matrices == nullptr);
+    EXPECT_EQ(count, -1);
+
+    Matrix::deleteMatrices(matrices, count);
+
+    EXPECT_TRUE(std::filesystem::remove(path));
+}
+
+TEST(MatrixTestsLab3, BinaryAppendsAfterPreexistingRecordWithoutTrailingWhitespace) {
+    const char* path = "matrices.bin";
+
+    {
+        std::ofstream out(path, std::ios::binary);
+        static const int record[2] = {1, 7};
+
+        out.write(
+            reinterpret_cast<const char*>(record),
+            sizeof(record)
+        );
+
+        ASSERT_FALSE(out.fail());
+    }
+
+    const int value = 9;
+    Matrix original(1, &value);
+
+    ASSERT_TRUE(original.saveBinaryMatrix());
+
+    int count = 0;
+    Matrix* matrices = Matrix::loadBinaryMatrices(count);
+
+    EXPECT_EQ(count, 2);
+
+    if (matrices && count == 2) {
+        EXPECT_EQ(matrices[0].getElement(0, 0), 7);
+        EXPECT_EQ(matrices[1].getElement(0, 0), 9);
+    }
+
+    Matrix::deleteMatrices(matrices, count);
+
+    std::remove(path);
+}
+
+// Проверка некорректного ввода и конструкторов
+
+TEST(MatrixTestsLab3, StreamInputRejectsInvalidDimensionsAndKeepsOldValue) {
+    const char* path = "lab3_invalid_dimension.tmp";
+
+    for (int dimension : {-2, 0, 46341, std::numeric_limits<int>::max()}) {
+        {
+            std::ofstream out(path);
+            out << dimension;
+            ASSERT_FALSE(out.fail());
+        }
+
+        Matrix restored(2);
+        Matrix before(restored);
+
+        {
+            std::ifstream in(path);
+            in >> restored;
             EXPECT_TRUE(in.fail());
         }
 
-        EXPECT_TRUE(m == Matrix(2, data));
+        EXPECT_TRUE(restored == before);
+
+        {
+            std::ofstream out(path, std::ios::binary);
+
+            out.write(
+                reinterpret_cast<const char*>(&dimension),
+                sizeof(dimension)
+            );
+
+            ASSERT_FALSE(out.fail());
+        }
+
+        {
+            std::ifstream in(path, std::ios::binary);
+            restored.loadBinary(in);
+            EXPECT_TRUE(in.fail());
+        }
+
+        EXPECT_TRUE(restored == before);
     }
 
     std::remove(path);
 }
 
-TEST(MatrixTestsLab3, EmptyFilesContainNoMatrices) {
-    const char* path = "lab3_empty.tmp";
-    {
-        std::ofstream out(path, std::ios::binary);
-    }
-    {
-        std::ifstream in(path);
-        ASSERT_TRUE(in.is_open());
+TEST(MatrixTestsLab3, InvalidElementsAndIncompleteInputKeepOldValue) {
+    const char* path = "lab3_invalid_elements.tmp";
 
-        in >> std::ws;
-        EXPECT_EQ(in.peek(), std::char_traits<char>::eof());
-        EXPECT_FALSE(in.bad());
-    }
-    {
-        std::ifstream in(path, std::ios::binary);
-        ASSERT_TRUE(in.is_open());
+    for (const char* input : {
+        "2 1 2 3",
+        "2 1 x 3 4",
+        "2 1 2 3 2147483648"
+    }) {
+        {
+            std::ofstream out(path);
+            out << input;
+            ASSERT_FALSE(out.fail());
+        }
 
-        EXPECT_EQ(in.peek(), std::char_traits<char>::eof());
-        EXPECT_FALSE(in.bad());
+        Matrix restored(3);
+        Matrix before(restored);
+
+        {
+            std::ifstream in(path);
+            in >> restored;
+            EXPECT_TRUE(in.fail());
+        }
+
+        EXPECT_TRUE(restored == before);
     }
 
     std::remove(path);
 }
 
-TEST(MatrixTestsLab3, MissingFileFailsToOpen) {
-    const char* path = "lab3_missing.tmp";
-    {
-        std::ofstream out(path);
-    }
-    ASSERT_EQ(std::remove(path), 0);
+TEST(MatrixTestsLab3, ConstructorsRejectInvalidDimensionsAndNullData) {
+    EXPECT_THROW(Matrix(-1), std::invalid_argument);
+    EXPECT_THROW(Matrix(46341), std::invalid_argument);
+    EXPECT_THROW(Matrix(2, nullptr), std::invalid_argument);
 
-    {
-        std::ifstream in(path);
-        EXPECT_FALSE(in.is_open());
-        EXPECT_TRUE(in.fail());
-    }
-    {
-        std::ifstream in(path, std::ios::binary);
-        EXPECT_FALSE(in.is_open());
-        EXPECT_TRUE(in.fail());
-    }
+    EXPECT_EQ(Matrix(0).getDimension(), 0);
 }
