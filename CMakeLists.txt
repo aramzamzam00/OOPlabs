@@ -11,6 +11,14 @@ endif()
 # Класс Matrix
 add_library(matrix matrix.cpp)
 
+target_compile_definitions(
+    matrix PRIVATE MATRIX_PROJECT_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+)
+
+target_compile_definitions(
+    matrix PRIVATE MATRIX_PROJECT_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+)
+
 target_include_directories(
     matrix PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
 )
@@ -22,19 +30,19 @@ target_link_libraries(matrix_app PRIVATE matrix)
 # Тесты
 include(CTest)
 
+include(FetchContent)
+
+FetchContent_Declare(
+    googletest
+    URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.zip
+)
+
+FetchContent_MakeAvailable(googletest)
+
+target_sources(matrix_app PRIVATE test.cpp)
+target_link_libraries(matrix_app PRIVATE gtest)
+
 if(BUILD_TESTING)
-    include(FetchContent)
-
-    FetchContent_Declare(
-        googletest
-        URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.zip
-    )
-
-    FetchContent_MakeAvailable(googletest)
-
-    target_sources(matrix_app PRIVATE test.cpp)
-    target_link_libraries(matrix_app PRIVATE gtest)
-
     add_executable(matrix_tests test.cpp)
     target_link_libraries(matrix_tests PRIVATE matrix gtest_main)
 

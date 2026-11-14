@@ -40,21 +40,20 @@ class Matrix {
         
         int operator()() const;
 
-        // Лабораторная № 3: работа с потоками
+        // Лабораторная 3
         void saveBinary(std::ostream& out) const;
         void loadBinary(std::istream& in);
 
         bool readMatrix();
 
-        bool saveTextMatrix() const;
-        bool saveBinaryMatrix() const;
+        bool saveTextMatrix(const char* fileName = nullptr) const;
+        bool saveBinaryMatrix(const char* fileName = nullptr) const;
 
-        bool loadTextMatrix(int recordNumber);
-        bool loadBinaryMatrix(int recordNumber);
+        bool loadTextMatrix(int recordNumber, const char* fileName = nullptr);
+        bool loadBinaryMatrix(int recordNumber, const char* fileName = nullptr);
 
-        // Загрузка всех записей:
-        static Matrix* loadTextMatrices(int& count);
-        static Matrix* loadBinaryMatrices(int& count);
+        static Matrix* loadTextMatrices(int& count, const char* fileName = nullptr);
+        static Matrix* loadBinaryMatrices(int& count, const char* fileName = nullptr);
 
         static void printMatrices(const Matrix* matrices, int count);
         static void deleteMatrices(Matrix*& matrices, int& count);

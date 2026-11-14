@@ -9,14 +9,12 @@
 #include <new>
 #include <utility>
 
-namespace {
-    int indexOf(int row, int col, int dim) {
-        return row * dim + col;
-    }
+static int indexOf(int row, int col, int dim) {
+    return row * dim + col;
 }
 
-static const char textFileName[] = "matrices.txt";
-static const char binaryFileName[] = "matrices.bin";
+static const char textFileName[] = MATRIX_PROJECT_DIR "/matrices.txt";
+static const char binaryFileName[] = MATRIX_PROJECT_DIR "/matrices.bin";
 
 // Конструкторы
 
@@ -329,7 +327,7 @@ int Matrix::operator()() const {
     return static_cast<int>(det);
 }
 
-// Лабораторная № 3: двоичные потоки
+// Лабораторная 3
 
 void Matrix::saveBinary(std::ostream& out) const {
     if (dimension <= 0) {
@@ -379,7 +377,6 @@ void Matrix::loadBinary(std::istream& in) {
     }
 }
 
-// Ввод с клавиатуры
 
 bool Matrix::readMatrix() {
     if (!(std::cin >> *this)) {
@@ -390,7 +387,6 @@ bool Matrix::readMatrix() {
     return true;
 }
 
-// Общий помощник сохранения
 
 static bool saveMatrix(
     const Matrix& matrix,
@@ -421,8 +417,6 @@ static bool saveMatrix(
         if (binary) {
             matrix.saveBinary(out);
         } else {
-            // Разделяем записи, даже если существующий файл
-            // не заканчивается пробелом или переводом строки.
             out << '\n' << matrix;
         }
 
@@ -446,15 +440,14 @@ static bool saveMatrix(
     }
 }
 
-bool Matrix::saveTextMatrix() const {
-    return saveMatrix(*this, textFileName, false);
+bool Matrix::saveTextMatrix(const char* fileName) const {
+    return saveMatrix(*this, fileName ? fileName : textFileName, false);
 }
 
-bool Matrix::saveBinaryMatrix() const {
-    return saveMatrix(*this, binaryFileName, true);
+bool Matrix::saveBinaryMatrix(const char* fileName) const {
+    return saveMatrix(*this, fileName ? fileName : binaryFileName, true);
 }
 
-// Добавление матрицы в динамический массив
 
 static void appendMatrix(
     Matrix*& matrices,
@@ -489,8 +482,6 @@ static void appendMatrix(
     ++count;
 }
 
-// Чтение одной записи из уже открытого файла.
-// Полнота записи проверяется до выделения памяти.
 
 static void readFileMatrix(
     std::ifstream& in,
@@ -534,6 +525,7 @@ static void readFileMatrix(
         }
     }
 
+    in.clear();
     in.seekg(position);
 
     if (!in) {
@@ -560,12 +552,7 @@ static Matrix* loadMatrices(
 ) {
     count = 0;
 
-    std::ifstream in(
-        fileName,
-        binary
-            ? std::ios::in | std::ios::binary
-            : std::ios::in
-    );
+    std::ifstream in(fileName, std::ios::in | std::ios::binary);
 
     if (!in) {
         std::cerr
@@ -613,15 +600,14 @@ static Matrix* loadMatrices(
     }
 }
 
-Matrix* Matrix::loadTextMatrices(int& count) {
-    return loadMatrices(textFileName, false, count);
+Matrix* Matrix::loadTextMatrices(int& count, const char* fileName) {
+    return loadMatrices(fileName ? fileName : textFileName, false, count);
 }
 
-Matrix* Matrix::loadBinaryMatrices(int& count) {
-    return loadMatrices(binaryFileName, true, count);
+Matrix* Matrix::loadBinaryMatrices(int& count, const char* fileName) {
+    return loadMatrices(fileName ? fileName : binaryFileName, true, count);
 }
 
-// Загрузка конкретной записи по номеру
 
 static bool loadMatrix(
     Matrix& matrix,
@@ -635,12 +621,7 @@ static bool loadMatrix(
     }
 
     try {
-        std::ifstream in(
-            fileName,
-            binary
-                ? std::ios::in | std::ios::binary
-                : std::ios::in
-        );
+        std::ifstream in(fileName, std::ios::in | std::ios::binary);
 
         if (!in) {
             throw std::runtime_error("Failed to open file");
@@ -678,25 +659,24 @@ static bool loadMatrix(
     }
 }
 
-bool Matrix::loadTextMatrix(int recordNumber) {
+bool Matrix::loadTextMatrix(int recordNumber, const char* fileName) {
     return loadMatrix(
         *this,
-        textFileName,
+        fileName ? fileName : textFileName,
         false,
         recordNumber
     );
 }
 
-bool Matrix::loadBinaryMatrix(int recordNumber) {
+bool Matrix::loadBinaryMatrix(int recordNumber, const char* fileName) {
     return loadMatrix(
         *this,
-        binaryFileName,
+        fileName ? fileName : binaryFileName,
         true,
         recordNumber
     );
 }
 
-// Печать и освобождение массива матриц
 
 void Matrix::printMatrices(const Matrix* matrices, int count) {
     if (count < 0) {
@@ -727,7 +707,6 @@ void Matrix::deleteMatrices(Matrix*& matrices, int& count) {
     count = 0;
 }
 
-// Сравнение матриц
 
 bool operator==(
     const Matrix& leftMatrix,
@@ -758,7 +737,6 @@ bool operator!=(
     return !(leftMatrix == rightMatrix);
 }
 
-// Текстовый вывод
 
 std::ostream& operator<<(std::ostream& out, const Matrix& matrix) {
     const int n = matrix.getDimension();
@@ -785,7 +763,6 @@ std::ostream& operator<<(std::ostream& out, const Matrix& matrix) {
     return out;
 }
 
-// Текстовый ввод
 
 std::istream& operator>>(std::istream& in, Matrix& matrix) {
     int n = 0;
@@ -820,7 +797,6 @@ std::istream& operator>>(std::istream& in, Matrix& matrix) {
     return in;
 }
 
-// Строковое представление элементов
 
 char* Matrix::formatElements() const {
     if (dimension == 0) {

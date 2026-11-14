@@ -18,6 +18,23 @@ int main(int argc, char** argv) {
     Matrix s(3, data3);
     Matrix fromKeyboard;
 
+    Matrix textMatrix;
+    Matrix binaryMatrix;
+
+    std::cout << "Text record 1 loaded: "
+              << textMatrix.loadTextMatrix(1) << '\n';
+
+    std::cout << "Binary record 1 loaded: "
+              << binaryMatrix.loadBinaryMatrix(1) << '\n';
+
+    Matrix::printMatrices(&textMatrix, 1);
+    Matrix::printMatrices(&binaryMatrix, 1);
+
+    Matrix transposed = textMatrix.transpose();
+
+    std::cout << "Loaded text matrix transposed:\n";
+    Matrix::printMatrices(&transposed, 1);
+
     std::cout
         << "Enter the matrix dimension "
         << "and its elements row by row:\n";
@@ -46,8 +63,23 @@ int main(int argc, char** argv) {
     std::cout << "Binary keyboard matrix saved: "
               << fromKeyboard.saveBinaryMatrix() << '\n';
 
+    int textCount = 0;
+    int binaryCount = 0;
+
+    Matrix* textMatrices = Matrix::loadTextMatrices(textCount);
+    Matrix* binaryMatrices = Matrix::loadBinaryMatrices(binaryCount);
+
+    std::cout << "All matrices from matrices.txt:\n";
+    Matrix::printMatrices(textMatrices, textCount);
+
+    std::cout << "All matrices from matrices.bin:\n";
+    Matrix::printMatrices(binaryMatrices, binaryCount);
+
+    Matrix::deleteMatrices(textMatrices, textCount);
+    Matrix::deleteMatrices(binaryMatrices, binaryCount);
+
     std::cout << "\n--- running tests ---\n\n";
-    ::testing::GTEST_FLAG(filter) = "MatrixTestsLab3.*";
     ::testing::InitGoogleTest(&argc, argv);
+    ::testing::GTEST_FLAG(filter) = "MatrixTestsLab3.*";
     return RUN_ALL_TESTS();
 }
