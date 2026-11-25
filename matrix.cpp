@@ -363,7 +363,7 @@ static void readRecord(std::istream& in, Matrix& matrix, bool binary) {
 
     Matrix temporary;
     int used = 0;
-    int side = n < 8 ? n : 8;
+    int side = std::min(n, 8);
 
     try {
         while (used < n * n) {
@@ -371,10 +371,9 @@ static void readRecord(std::istream& in, Matrix& matrix, bool binary) {
             if (used > 0) {
                 std::copy_n(temporary.getElements(), used, next[0]);
             }
-            temporary = std::move(next);
 
             const int end = side * side;
-            int* data = temporary[0];
+            int* data = next[0];
             if (binary) {
                 in.read(reinterpret_cast<char*>(data + used),
                         static_cast<std::streamsize>(sizeof(int)) * (end - used));
@@ -386,6 +385,7 @@ static void readRecord(std::istream& in, Matrix& matrix, bool binary) {
             if (!in) {
                 return;
             }
+            temporary = std::move(next);
             used = end;
             side = std::min(n, side * 2);
         }
@@ -493,39 +493,67 @@ Matrix* loadBinary(int& count, const char* path) {
     return loadRecords(path ? path : binaryFileName, count, true);
 }
 
-static void printMatrices(const Matrix* matrices, int count) {
+void printMatrices(std::ostream& out, const Matrix* matrices, int count) {
     if (count < 0) {
-        std::cout << "Matrices could not be loaded.\n";
+        out << "Matrices could not be loaded.\n";
         return;
     }
 
     if (!matrices || count == 0) {
-        std::cout << "No matrices loaded.\n";
+        out << "No matrices loaded.\n";
         return;
     }
 
     for (int i = 0; i < count; ++i) {
-        std::cout << "Matrix " << i + 1 << ":\n";
+        out << "Matrix " << i + 1 << ":\n";
 
         if (matrices[i].getDimension() == 0) {
-            std::cout << "Empty matrix.\n";
+            out << "Empty matrix.\n";
         } else {
-            std::cout << matrices[i] << '\n';
+            out << matrices[i] << '\n';
         }
     }
 }
 
-void printSavedMatrices() {
+static void printSavedMatrices() {
     int count = 0;
     std::cout << "Matrices from matrices.txt:\n";
     Matrix* items = loadText(count, nullptr);
-    printMatrices(items, count);
+    printMatrices(std::cout, items, count);
     delete[] items;
 
     std::cout << "Matrices from matrices.bin:\n";
     items = loadBinary(count, nullptr);
-    printMatrices(items, count);
+    printMatrices(std::cout, items, count);
     delete[] items;
+}
+
+void demonstrateMatrices() {
+    std::cout << "Previously saved matrices:\n";
+    printSavedMatrices();
+
+    int count = 0;
+    Matrix* items = loadText(count, MATRIX_PROJECT_DIR "/matrices_ex.txt");
+    std::cout << "Matrices from matrices_ex.txt:\n";
+    printMatrices(std::cout, items, count);
+    if (count > 0) {
+        std::cout << "Text save: " << saveText(items, count, nullptr) << '\n';
+        std::cout << "Binary save: " << saveBinary(items, count, nullptr) << '\n';
+    }
+    delete[] items;
+
+    Matrix typed;
+    std::cout << "Enter the dimension and the elements row by row:\n";
+    if (std::cin >> typed) {
+        std::cout << "Entered matrix:\n" << typed;
+        std::cout << "Text save: " << saveText(&typed, 1, nullptr) << '\n';
+        std::cout << "Binary save: " << saveBinary(&typed, 1, nullptr) << '\n';
+    } else {
+        std::cerr << "No complete matrix entered.\n";
+    }
+
+    std::cout << "Matrices after saving:\n";
+    printSavedMatrices();
 }
 
 bool operator==(

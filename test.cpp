@@ -431,6 +431,7 @@ bool saveText(const Matrix* items, int count, const char* path);
 bool saveBinary(const Matrix* items, int count, const char* path);
 Matrix* loadText(int& count, const char* path);
 Matrix* loadBinary(int& count, const char* path);
+void printMatrices(std::ostream& out, const Matrix* matrices, int count);
 
 TEST(MatrixTestsLab3, OutputOperatorWritesTwoMatrices) {
     const int data[] = {-1, 0, 3, 4};
@@ -588,4 +589,50 @@ TEST(MatrixTestsLab3, InvalidOrIncompleteRecordKeepsOriginal) {
         EXPECT_TRUE(binary.fail());
         EXPECT_TRUE(restored == original);
     }
+}
+
+TEST(MatrixTestsLab3, PrintMatricesUsesOutputStream) {
+    const int data[] = {-1, 0, 3, 4};
+    Matrix items[] = {Matrix(2, data), Matrix(1)};
+    std::ostringstream out;
+    printMatrices(out, items, 2);
+    EXPECT_EQ(out.str(), "Matrix 1:\n2\n-1\t0\n3\t4\n\nMatrix 2:\n1\n0\n\n");
+}
+
+TEST(MatrixTestsLab3, PreparedTextMatricesAppendToBothFiles) {
+    const char* source = "lab3_example.tmp";
+    const char* text = "lab3_example_text.tmp";
+    const char* binary = "lab3_example_binary.tmp";
+    std::remove(text);
+    std::remove(binary);
+    {
+        std::ofstream out(source);
+        out << "2\n11 -3\n0 27\n1\n-7";
+        out.close();
+        ASSERT_TRUE(out);
+    }
+
+    Matrix old(1);
+    ASSERT_TRUE(saveText(&old, 1, text));
+    ASSERT_TRUE(saveBinary(&old, 1, binary));
+
+    int count = 0;
+    Matrix* items = loadText(count, source);
+    EXPECT_EQ(count, 2);
+    EXPECT_TRUE(saveText(items, count, text));
+    EXPECT_TRUE(saveBinary(items, count, binary));
+    delete[] items;
+
+    const int data[] = {11, -3, 0, 27};
+    const int last = -7;
+    for (bool useBinary : {false, true}) {
+        items = useBinary ? loadBinary(count, binary) : loadText(count, text);
+        EXPECT_EQ(count, 3);
+        EXPECT_TRUE(items && count == 3 && items[0] == old &&
+                    items[1] == Matrix(2, data) && items[2] == Matrix(1, &last));
+        delete[] items;
+    }
+    std::remove(source);
+    std::remove(text);
+    std::remove(binary);
 }
