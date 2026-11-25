@@ -8,6 +8,7 @@
 #include <limits>
 #include <new>
 #include <utility>
+#include <algorithm>
 
 static int indexOf(int row, int col, int dim) {
     return row * dim + col;
@@ -347,338 +348,152 @@ void Matrix::saveBinary(std::ostream& out) const {
     );
 }
 
-void Matrix::loadBinary(std::istream& in) {
+static void readRecord(std::istream& in, Matrix& matrix, bool binary) {
     int n = 0;
-
-    if (!in.read(reinterpret_cast<char*>(&n), sizeof(n))) {
-        return;
-    }
-
-    if (n <= 0 || n > std::numeric_limits<int>::max() / n) {
-        in.setstate(std::ios::failbit);
-        return;
-    }
-
-    try {
-        Matrix temporary(n);
-
-        in.read(
-            reinterpret_cast<char*>(temporary.elements),
-            static_cast<std::streamsize>(sizeof(int)) * n * n
-        );
-
-        if (in) {
-            *this = std::move(temporary);
-        }
-    } catch (const std::invalid_argument&) {
-        in.setstate(std::ios::failbit);
-    } catch (const std::bad_alloc&) {
-        in.setstate(std::ios::failbit);
-    }
-}
-
-
-bool Matrix::readMatrix() {
-    if (!(std::cin >> *this)) {
-        std::cerr << "Invalid or incomplete matrix.\n";
-        return false;
-    }
-
-    return true;
-}
-
-
-static bool saveMatrix(
-    const Matrix& matrix,
-    const char* fileName,
-    bool binary
-) {
-    if (matrix.getDimension() <= 0) {
-        std::cerr << "Cannot save an empty matrix.\n";
-        return false;
-    }
-
-    try {
-        std::ofstream out(
-            fileName,
-            binary
-                ? std::ios::binary | std::ios::app
-                : std::ios::app
-        );
-
-        if (!out) {
-            std::cerr
-                << "Failed to open file for writing: "
-                << fileName << '\n';
-
-            return false;
-        }
-
-        if (binary) {
-            matrix.saveBinary(out);
-        } else {
-            out << '\n' << matrix;
-        }
-
-        out.close();
-
-        if (!out) {
-            std::cerr
-                << "Failed to write file: "
-                << fileName << '\n';
-
-            return false;
-        }
-
-        return true;
-    } catch (const std::exception& error) {
-        std::cerr
-            << "Failed to save matrix: "
-            << error.what() << '\n';
-
-        return false;
-    }
-}
-
-bool Matrix::saveTextMatrix(const char* fileName) const {
-    return saveMatrix(*this, fileName ? fileName : textFileName, false);
-}
-
-bool Matrix::saveBinaryMatrix(const char* fileName) const {
-    return saveMatrix(*this, fileName ? fileName : binaryFileName, true);
-}
-
-
-static void appendMatrix(
-    Matrix*& matrices,
-    int& count,
-    int& capacity,
-    const Matrix& matrix
-) {
-    if (count == capacity) {
-        if (capacity > std::numeric_limits<int>::max() / 2) {
-            throw std::length_error("Too many matrices");
-        }
-
-        int newCapacity = capacity == 0 ? 4 : capacity * 2;
-        Matrix* newMatrices = new Matrix[newCapacity];
-
-        try {
-            for (int i = 0; i < count; ++i) {
-                newMatrices[i] = matrices[i];
-            }
-        } catch (...) {
-            delete[] newMatrices;
-            throw;
-        }
-
-        delete[] matrices;
-
-        matrices = newMatrices;
-        capacity = newCapacity;
-    }
-
-    matrices[count] = matrix;
-    ++count;
-}
-
-
-static void readFileMatrix(
-    std::ifstream& in,
-    bool binary,
-    Matrix& loaded
-) {
-    std::streampos position = in.tellg();
-
-    int n = 0;
-
     if (binary) {
         in.read(reinterpret_cast<char*>(&n), sizeof(n));
     } else {
         in >> n;
     }
 
-    if (!in ||
-        n <= 0 ||
-        n > std::numeric_limits<int>::max() / n) {
-        throw std::runtime_error("Invalid matrix dimension");
+    if (!in || n <= 0 || n > std::numeric_limits<int>::max() / n) {
+        in.setstate(std::ios::failbit);
+        return;
     }
 
-    if (binary) {
-        std::streampos dataPosition = in.tellg();
+    Matrix temporary;
+    int used = 0;
+    int side = n < 8 ? n : 8;
 
-        in.seekg(0, std::ios::end);
-
-        std::streamoff bytes =
-            static_cast<std::streamoff>(sizeof(int)) * n * n;
-
-        if (!in || in.tellg() - dataPosition < bytes) {
-            throw std::runtime_error("Incomplete binary record");
-        }
-    } else {
-        int value = 0;
-
-        for (int i = 0; i < n * n; ++i) {
-            if (!(in >> value)) {
-                throw std::runtime_error("Invalid text record");
+    try {
+        while (used < n * n) {
+            Matrix next(side);
+            if (used > 0) {
+                std::copy_n(temporary.getElements(), used, next[0]);
             }
+            temporary = std::move(next);
+
+            const int end = side * side;
+            int* data = temporary[0];
+            if (binary) {
+                in.read(reinterpret_cast<char*>(data + used),
+                        static_cast<std::streamsize>(sizeof(int)) * (end - used));
+            } else {
+                for (int i = used; i < end && in; ++i) {
+                    in >> data[i];
+                }
+            }
+            if (!in) {
+                return;
+            }
+            used = end;
+            side = std::min(n, side * 2);
+        }
+    } catch (const std::bad_alloc&) {
+        in.setstate(std::ios::failbit);
+        return;
+    }
+
+    matrix = std::move(temporary);
+}
+
+void Matrix::loadBinary(std::istream& in) {
+    readRecord(in, *this, true);
+}
+
+static bool saveRecords(const char* path, const Matrix* items, int count, bool binary) {
+    if (count < 0 || (count > 0 && !items)) {
+        return false;
+    }
+    for (int i = 0; i < count; ++i) {
+        if (items[i].getDimension() == 0) {
+            return false;
         }
     }
 
-    in.clear();
-    in.seekg(position);
-
-    if (!in) {
-        throw std::runtime_error("Failed to read record");
+    std::ofstream out(path, binary ? std::ios::binary | std::ios::app : std::ios::app);
+    for (int i = 0; i < count && out; ++i) {
+        if (binary) {
+            items[i].saveBinary(out);
+        } else {
+            out << '\n' << items[i];
+        }
     }
+    out.close();
+    return !out.fail();
+}
 
-    if (binary) {
-        loaded.loadBinary(in);
-    } else {
-        in >> loaded;
-    }
+bool saveText(const Matrix* items, int count, const char* path) {
+    return saveRecords(path ? path : textFileName, items, count, false);
+}
 
-    if (!in) {
-        throw std::runtime_error("Corrupted matrix record");
-    }
+bool saveBinary(const Matrix* items, int count, const char* path) {
+    return saveRecords(path ? path : binaryFileName, items, count, true);
 }
 
 // Загрузка всех матриц из файла
 
-static Matrix* loadMatrices(
-    const char* fileName,
-    bool binary,
-    int& count
-) {
+static Matrix* loadRecords(const char* path, int& count, bool binary) {
     count = 0;
-
-    std::ifstream in(fileName, std::ios::in | std::ios::binary);
-
-    if (!in) {
-        std::cerr
-            << "Failed to open file for reading: "
-            << fileName << '\n';
-
-        count = -1;
-        return nullptr;
-    }
-
-    Matrix* matrices = nullptr;
+    std::ifstream in(path, binary ? std::ios::binary : std::ios::in);
+    Matrix* items = nullptr;
     int capacity = 0;
 
     try {
-        while (true) {
+        while (in) {
             if (!binary) {
                 in >> std::ws;
             }
-
             if (in.peek() == std::char_traits<char>::eof()) {
-                if (in.bad() || !in.eof()) {
-                    throw std::runtime_error("File read error");
+                if (in.eof() && !in.bad()) {
+                    return items;
                 }
-
                 break;
             }
 
-            Matrix loaded;
-
-            readFileMatrix(in, binary, loaded);
-            appendMatrix(matrices, count, capacity, loaded);
-        }
-
-        return matrices;
-    } catch (const std::exception& error) {
-        delete[] matrices;
-
-        count = -1;
-
-        std::cerr
-            << "Failed to load " << fileName
-            << ": " << error.what() << '\n';
-
-        return nullptr;
-    }
-}
-
-Matrix* Matrix::loadTextMatrices(int& count, const char* fileName) {
-    return loadMatrices(fileName ? fileName : textFileName, false, count);
-}
-
-Matrix* Matrix::loadBinaryMatrices(int& count, const char* fileName) {
-    return loadMatrices(fileName ? fileName : binaryFileName, true, count);
-}
-
-
-static bool loadMatrix(
-    Matrix& matrix,
-    const char* fileName,
-    bool binary,
-    int recordNumber
-) {
-    if (recordNumber <= 0) {
-        std::cerr << "Record numbers start at 1.\n";
-        return false;
-    }
-
-    try {
-        std::ifstream in(fileName, std::ios::in | std::ios::binary);
-
-        if (!in) {
-            throw std::runtime_error("Failed to open file");
-        }
-
-        for (int record = 0; record < recordNumber; ++record) {
-            if (!binary) {
-                in >> std::ws;
+            Matrix current;
+            if (binary) {
+                current.loadBinary(in);
+            } else {
+                in >> current;
+            }
+            if (!in) {
+                break;
             }
 
-            if (in.peek() == std::char_traits<char>::eof()) {
-                if (in.bad() || !in.eof()) {
-                    throw std::runtime_error("File read error");
+            if (count == capacity) {
+                if (capacity > std::numeric_limits<int>::max() / 2) {
+                    break;
                 }
-
-                throw std::runtime_error("Record not found");
+                capacity = capacity == 0 ? 4 : capacity * 2;
+                Matrix* larger = new Matrix[capacity];
+                for (int i = 0; i < count; ++i) {
+                    larger[i] = std::move(items[i]);
+                }
+                delete[] items;
+                items = larger;
             }
-
-            Matrix loaded;
-
-            readFileMatrix(in, binary, loaded);
-
-            if (record == recordNumber - 1) {
-                matrix = std::move(loaded);
-            }
+            items[count++] = std::move(current);
         }
-
-        return true;
-    } catch (const std::exception& error) {
-        std::cerr
-            << "Failed to load " << fileName
-            << ": " << error.what() << '\n';
-
-        return false;
+    } catch (const std::bad_alloc&) {
+        in.setstate(std::ios::failbit);
     }
+
+    delete[] items;
+    count = -1;
+    std::cerr << "Cannot read matrix file: " << path << '\n';
+    return nullptr;
 }
 
-bool Matrix::loadTextMatrix(int recordNumber, const char* fileName) {
-    return loadMatrix(
-        *this,
-        fileName ? fileName : textFileName,
-        false,
-        recordNumber
-    );
+Matrix* loadText(int& count, const char* path) {
+    return loadRecords(path ? path : textFileName, count, false);
 }
 
-bool Matrix::loadBinaryMatrix(int recordNumber, const char* fileName) {
-    return loadMatrix(
-        *this,
-        fileName ? fileName : binaryFileName,
-        true,
-        recordNumber
-    );
+Matrix* loadBinary(int& count, const char* path) {
+    return loadRecords(path ? path : binaryFileName, count, true);
 }
 
-
-void Matrix::printMatrices(const Matrix* matrices, int count) {
+static void printMatrices(const Matrix* matrices, int count) {
     if (count < 0) {
         std::cout << "Matrices could not be loaded.\n";
         return;
@@ -700,13 +515,18 @@ void Matrix::printMatrices(const Matrix* matrices, int count) {
     }
 }
 
-void Matrix::deleteMatrices(Matrix*& matrices, int& count) {
-    delete[] matrices;
+void printSavedMatrices() {
+    int count = 0;
+    std::cout << "Matrices from matrices.txt:\n";
+    Matrix* items = loadText(count, nullptr);
+    printMatrices(items, count);
+    delete[] items;
 
-    matrices = nullptr;
-    count = 0;
+    std::cout << "Matrices from matrices.bin:\n";
+    items = loadBinary(count, nullptr);
+    printMatrices(items, count);
+    delete[] items;
 }
-
 
 bool operator==(
     const Matrix& leftMatrix,
@@ -765,35 +585,7 @@ std::ostream& operator<<(std::ostream& out, const Matrix& matrix) {
 
 
 std::istream& operator>>(std::istream& in, Matrix& matrix) {
-    int n = 0;
-
-    if (!(in >> n)) {
-        return in;
-    }
-
-    if (n <= 0 || n > std::numeric_limits<int>::max() / n) {
-        in.setstate(std::ios::failbit);
-        return in;
-    }
-
-    try {
-        Matrix temporary(n);
-
-        for (int row = 0; row < n; ++row) {
-            for (int col = 0; col < n; ++col) {
-                if (!(in >> temporary[row][col])) {
-                    return in;
-                }
-            }
-        }
-
-        matrix = std::move(temporary);
-    } catch (const std::invalid_argument&) {
-        in.setstate(std::ios::failbit);
-    } catch (const std::bad_alloc&) {
-        in.setstate(std::ios::failbit);
-    }
-
+    readRecord(in, matrix, false);
     return in;
 }
 
