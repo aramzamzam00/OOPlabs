@@ -9,7 +9,12 @@ if(POLICY CMP0135)
 endif()
 
 # Класс Matrix
-add_library(matrix matrix.cpp)
+add_library(matrix
+    matrix.cpp
+    identity_matrix.cpp
+    rectangular_matrix.cpp
+    matrix_queue.cpp
+)
 
 target_compile_definitions(
     matrix PRIVATE MATRIX_PROJECT_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
@@ -43,6 +48,7 @@ target_sources(matrix_app PRIVATE
     test.cpp
     identity_matrix.cpp
     rectangular_matrix.cpp
+    matrix_queue.cpp
 )
 target_link_libraries(matrix_app PRIVATE gtest)
 

@@ -7,6 +7,10 @@
 #include <cstdio>
 #include <sstream>
 #include <limits>
+#include <stdexcept>
+#include "matrix_queue.h"
+#include "identity_matrix.h"
+#include "rectangular_matrix.h"
 
 TEST(MatrixTestsLab1, DefaultConstructorCreatesEmptyMatrix) {
     Matrix m;
@@ -635,4 +639,70 @@ TEST(MatrixTestsLab3, PreparedTextMatricesAppendToBothFiles) {
     std::remove(source);
     std::remove(text);
     std::remove(binary);
+}
+TEST(MatrixTestsLab5, DequeueReturnsOriginalObjectsInOrder) {
+    Matrix a(1), b(2);
+    MatrixQueue queue;
+
+    EXPECT_EQ(queue.getSize(), 0);
+    EXPECT_EQ(queue.dequeue(), nullptr);
+
+    queue.enqueue(a);
+    queue.enqueue(b);
+    EXPECT_EQ(queue.getSize(), 2);
+    EXPECT_EQ(queue.dequeue(), &a);
+    queue.enqueue(a);
+    EXPECT_EQ(queue.dequeue(), &b);
+    EXPECT_EQ(queue.dequeue(), &a);
+    EXPECT_EQ(queue.getSize(), 0);
+
+    queue.enqueue(b);
+    EXPECT_EQ(queue.dequeue(), &b);
+}
+
+TEST(MatrixTestsLab5, InsertAndRemoveAtNumberedPositions) {
+    Matrix a(1), b(1), c(1), d(1);
+    MatrixQueue queue;
+
+    queue.insert(1, b);
+    queue.insert(1, a);
+    queue.insert(3, d);
+    queue.insert(3, c);
+    ASSERT_EQ(queue.getSize(), 4);
+
+    EXPECT_EQ(queue.removeAt(2), &b);
+    EXPECT_EQ(queue.removeAt(3), &d);
+    queue.enqueue(d);
+    EXPECT_EQ(queue.removeAt(1), &a);
+    EXPECT_EQ(queue.dequeue(), &c);
+    EXPECT_EQ(queue.dequeue(), &d);
+    EXPECT_EQ(queue.getSize(), 0);
+}
+
+TEST(MatrixTestsLab5, InvalidPositionKeepsQueueUnchanged) {
+    Matrix a(1), b(1);
+    MatrixQueue queue;
+    EXPECT_THROW(queue.removeAt(1), std::out_of_range);
+    queue.enqueue(a);
+
+    EXPECT_THROW(queue.insert(0, b), std::out_of_range);
+    EXPECT_THROW(queue.insert(3, b), std::out_of_range);
+    EXPECT_THROW(queue.removeAt(0), std::out_of_range);
+    EXPECT_THROW(queue.removeAt(2), std::out_of_range);
+    ASSERT_EQ(queue.getSize(), 1);
+    EXPECT_EQ(queue.dequeue(), &a);
+}
+
+TEST(MatrixTestsLab5, FindUsesObjectAddressAndReturnsFirstMatch) {
+    Matrix a(2), b(a), other(a);
+    MatrixQueue queue;
+    queue.enqueue(a);
+    queue.enqueue(b);
+    queue.enqueue(a);
+
+    EXPECT_EQ(queue.find(a), 1);
+    EXPECT_EQ(queue.find(b), 2);
+    EXPECT_EQ(queue.find(other), 0);
+    EXPECT_EQ(queue.dequeue(), &a);
+    EXPECT_EQ(queue.find(a), 2);
 }
