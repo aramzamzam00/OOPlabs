@@ -8,7 +8,6 @@
 #include <limits>
 #include <new>
 #include <utility>
-#include <algorithm>
 
 static int indexOf(int row, int col, int dim) {
     return row * dim + col;
@@ -330,6 +329,59 @@ int Matrix::operator()() const {
 
 // Лабораторная 3
 
+static void readRecord(std::istream& in, Matrix& matrix, bool binary) {
+    int n = 0;
+    if (binary) {
+        in.read(reinterpret_cast<char*>(&n), sizeof(n));
+    } else {
+        in >> n;
+    }
+
+    if (!in || n <= 0 || n > std::numeric_limits<int>::max() / n) {
+        in.setstate(std::ios::failbit);
+        return;
+    }
+
+    Matrix temporary;
+    int used = 0;
+    int side = n < 8 ? n : 8;
+
+    try {
+        while (used < n * n) {
+            Matrix next(side);
+            int* data = next[0];
+            const int* previous = temporary.getElements();
+            for (int i = 0; i < used; ++i) {
+                data[i] = previous[i];
+            }
+
+            const int end = side * side;
+            if (binary) {
+                in.read(reinterpret_cast<char*>(data + used),
+                        static_cast<std::streamsize>(sizeof(int)) * (end - used));
+            } else {
+                for (int i = used; i < end && in; ++i) {
+                    in >> data[i];
+                }
+            }
+            if (!in) {
+                return;
+            }
+            temporary = std::move(next);
+            used = end;
+            side *= 2;
+            if (side > n) {
+                side = n;
+            }
+        }
+    } catch (const std::bad_alloc&) {
+        in.setstate(std::ios::failbit);
+        return;
+    }
+
+    matrix = std::move(temporary);
+}
+
 void Matrix::saveBinary(std::ostream& out) const {
     if (dimension <= 0) {
         out.setstate(std::ios::failbit);
@@ -346,55 +398,6 @@ void Matrix::saveBinary(std::ostream& out) const {
         static_cast<std::streamsize>(sizeof(int)) *
             dimension * dimension
     );
-}
-
-static void readRecord(std::istream& in, Matrix& matrix, bool binary) {
-    int n = 0;
-    if (binary) {
-        in.read(reinterpret_cast<char*>(&n), sizeof(n));
-    } else {
-        in >> n;
-    }
-
-    if (!in || n <= 0 || n > std::numeric_limits<int>::max() / n) {
-        in.setstate(std::ios::failbit);
-        return;
-    }
-
-    Matrix temporary;
-    int used = 0;
-    int side = std::min(n, 8);
-
-    try {
-        while (used < n * n) {
-            Matrix next(side);
-            if (used > 0) {
-                std::copy_n(temporary.getElements(), used, next[0]);
-            }
-
-            const int end = side * side;
-            int* data = next[0];
-            if (binary) {
-                in.read(reinterpret_cast<char*>(data + used),
-                        static_cast<std::streamsize>(sizeof(int)) * (end - used));
-            } else {
-                for (int i = used; i < end && in; ++i) {
-                    in >> data[i];
-                }
-            }
-            if (!in) {
-                return;
-            }
-            temporary = std::move(next);
-            used = end;
-            side = std::min(n, side * 2);
-        }
-    } catch (const std::bad_alloc&) {
-        in.setstate(std::ios::failbit);
-        return;
-    }
-
-    matrix = std::move(temporary);
 }
 
 void Matrix::loadBinary(std::istream& in) {
