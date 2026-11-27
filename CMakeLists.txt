@@ -39,7 +39,11 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(googletest)
 
-target_sources(matrix_app PRIVATE test.cpp)
+target_sources(matrix_app PRIVATE
+    test.cpp
+    identity_matrix.cpp
+    rectangular_matrix.cpp
+)
 target_link_libraries(matrix_app PRIVATE gtest)
 
 if(BUILD_TESTING)

@@ -1,10 +1,13 @@
 #include <iostream>
 #include <gtest/gtest.h>
 
-void demonstrateMatrices();
+void demonstrateIdentityMatrix();
+void demonstrateRectangularMatrix();
+
 
 int main(int argc, char** argv) {
-    demonstrateMatrices();
+    demonstrateIdentityMatrix();
+    demonstrateRectangularMatrix();
 
     std::cout << "\n--- running tests ---\n\n";
     ::testing::InitGoogleTest(&argc, argv);
