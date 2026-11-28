@@ -706,3 +706,21 @@ TEST(MatrixTestsLab5, FindUsesObjectAddressAndReturnsFirstMatch) {
     EXPECT_EQ(queue.dequeue(), &a);
     EXPECT_EQ(queue.find(a), 2);
 }
+
+TEST(MatrixTestsLab5, OutputUsesActualMatrixTypeAndCurrentValues) {
+    const int data[] = {1, 2, 3, 4, 5, 6};
+    Matrix square(1);
+    IdentityMatrix identity(2);
+    RectangularMatrix rectangle(2, 3, data);
+    MatrixQueue queue;
+    queue.enqueue(square);
+    queue.enqueue(identity);
+    queue.enqueue(rectangle);
+
+    square[0][0] = -7;
+    std::ostringstream out;
+    out << queue;
+    EXPECT_EQ(out.str(), "1. 1\n-7\n"
+                         "2. 2\n1\t0\n0\t1\n"
+                         "3. 2 3\n1\t2\t3\n4\t5\t6\n");
+}

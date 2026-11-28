@@ -1,5 +1,6 @@
 #include "rectangular_matrix.h"
 #include <iostream>
+#include <new>
 #include <stdexcept>
 
 static int storageDimension(int rows, int columns) {
@@ -61,20 +62,6 @@ RectangularMatrix RectangularMatrix::transpose() const {
     return result;
 }
 
-std::ostream& operator<<(std::ostream& out, const RectangularMatrix& matrix) {
-    out << matrix.getRows() << ' ' << matrix.getColumns() << '\n';
-    for (int i = 0; i < matrix.getRows(); ++i) {
-        for (int j = 0; j < matrix.getColumns(); ++j) {
-            if (j > 0) {
-                out << '\t';
-            }
-            out << matrix.getElement(i, j);
-        }
-        out << '\n';
-    }
-    return out;
-}
-
 void demonstrateRectangularMatrix() {
     const int data[] = {1, 2, 3, 4, 5, 6};
     RectangularMatrix original(2, 3, data);
@@ -84,4 +71,34 @@ void demonstrateRectangularMatrix() {
     std::cout << "Rectangular matrix:\n" << original;
     std::cout << "Changed copy:\n" << copy;
     std::cout << "Transposed original:\n" << original.transpose();
+}
+
+void RectangularMatrix::writeTo(std::ostream& out) const {
+    out << getRows() << ' ' << getColumns() << '\n';
+    for (int i = 0; i < getRows(); ++i) {
+        for (int j = 0; j < getColumns(); ++j) {
+            if (j > 0) {
+                out << '\t';
+            }
+            out << getElement(i, j);
+        }
+        out << '\n';
+    }
+}
+
+void RectangularMatrix::readFrom(std::istream& in) {
+    int r, c;
+    if (!(in >> r >> c)) {
+        return;
+    }
+
+    Matrix values;
+    readValues(in, values, r, c, false);
+    if (in) {
+        try {
+            *this = RectangularMatrix(r, c, values.getElements());
+        } catch (const std::bad_alloc&) {
+            in.setstate(std::ios::failbit);
+        }
+    }
 }

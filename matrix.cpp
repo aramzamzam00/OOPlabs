@@ -329,15 +329,9 @@ int Matrix::operator()() const {
 
 // Лабораторная 3
 
-static void readRecord(std::istream& in, Matrix& matrix, bool binary) {
-    int n = 0;
-    if (binary) {
-        in.read(reinterpret_cast<char*>(&n), sizeof(n));
-    } else {
-        in >> n;
-    }
-
-    if (!in || n <= 0 || n > std::numeric_limits<int>::max() / n) {
+void Matrix::readValues(std::istream& in, Matrix& values, int rows, int columns, bool binary) {
+    const int n = rows > columns ? rows : columns;
+    if (!in || rows <= 0 || columns <= 0 || n > std::numeric_limits<int>::max() / n) {
         in.setstate(std::ios::failbit);
         return;
     }
@@ -347,7 +341,7 @@ static void readRecord(std::istream& in, Matrix& matrix, bool binary) {
     int side = n < 8 ? n : 8;
 
     try {
-        while (used < n * n) {
+        while (used < rows * columns) {
             Matrix next(side);
             int* data = next[0];
             const int* previous = temporary.getElements();
@@ -355,7 +349,7 @@ static void readRecord(std::istream& in, Matrix& matrix, bool binary) {
                 data[i] = previous[i];
             }
 
-            const int end = side * side;
+            const int end = side * side < rows * columns ? side * side : rows * columns;
             if (binary) {
                 in.read(reinterpret_cast<char*>(data + used),
                         static_cast<std::streamsize>(sizeof(int)) * (end - used));
@@ -379,7 +373,7 @@ static void readRecord(std::istream& in, Matrix& matrix, bool binary) {
         return;
     }
 
-    matrix = std::move(temporary);
+    values = std::move(temporary);
 }
 
 void Matrix::saveBinary(std::ostream& out) const {
@@ -401,7 +395,10 @@ void Matrix::saveBinary(std::ostream& out) const {
 }
 
 void Matrix::loadBinary(std::istream& in) {
-    readRecord(in, *this, true);
+    int n = 0;
+    if (in.read(reinterpret_cast<char*>(&n), sizeof(n))) {
+        readValues(in, *this, n, n, true);
+    }
 }
 
 static bool saveRecords(const char* path, const Matrix* items, int count, bool binary) {
@@ -590,33 +587,13 @@ bool operator!=(
 
 
 std::ostream& operator<<(std::ostream& out, const Matrix& matrix) {
-    const int n = matrix.getDimension();
-
-    if (n <= 0) {
-        out.setstate(std::ios::failbit);
-        return out;
-    }
-
-    out << n << '\n';
-
-    for (int i = 0; i < n; ++i) {
-        for (int j = 0; j < n; ++j) {
-            out << matrix.getElement(i, j);
-
-            if (j + 1 < n) {
-                out << '\t';
-            }
-        }
-
-        out << '\n';
-    }
-
+    matrix.writeTo(out);
     return out;
 }
 
 
 std::istream& operator>>(std::istream& in, Matrix& matrix) {
-    readRecord(in, matrix, false);
+    matrix.readFrom(in);
     return in;
 }
 
@@ -666,4 +643,34 @@ char* Matrix::formatElements() const {
     buffer[pos] = '\0';
 
     return buffer;
+}
+
+void Matrix::readFrom(std::istream& in) {
+    int n = 0;
+    if (in >> n) {
+        readValues(in, *this, n, n, false);
+    }
+}
+
+void Matrix::writeTo(std::ostream& out) const {
+    const int n = getDimension();
+
+    if (n <= 0) {
+        out.setstate(std::ios::failbit);
+        return;
+    }
+
+    out << n << '\n';
+
+    for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < n; ++j) {
+            out << getElement(i, j);
+
+            if (j + 1 < n) {
+                out << '\t';
+            }
+        }
+
+        out << '\n';
+    }
 }

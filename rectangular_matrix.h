@@ -14,6 +14,10 @@ class RectangularMatrix : public Matrix {
         RectangularMatrix setElement(int row, int col, int value) const;
         RectangularMatrix transpose() const;
 
+    protected:
+        virtual void writeTo(std::ostream& out) const override;
+        virtual void readFrom(std::istream& in) override;
+
     private:
         int rows;
         int columns;
@@ -21,4 +25,4 @@ class RectangularMatrix : public Matrix {
         using Matrix::operator[];
 };
 
-std::ostream& operator<<(std::ostream& out, const RectangularMatrix& matrix);
+void demonstrateRectangularMatrix();

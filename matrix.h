@@ -9,7 +9,7 @@ class Matrix {
         Matrix(int newDimension, const int* newElements);
 
         // Правило пяти
-        ~Matrix();
+        virtual ~Matrix();
         Matrix(const Matrix& other);
         Matrix(Matrix&& other);
         Matrix& operator=(const Matrix& other);
@@ -44,6 +44,14 @@ class Matrix {
         // Лабораторная 3
         void saveBinary(std::ostream& out) const;
         void loadBinary(std::istream& in);
+
+        friend std::ostream& operator<<(std::ostream& out, const Matrix& matrix);
+        friend std::istream& operator>>(std::istream& in, Matrix& matrix);
+
+    protected:
+        virtual void writeTo(std::ostream& out) const;
+        virtual void readFrom(std::istream& in);
+        static void readValues(std::istream& in, Matrix& values, int rows, int columns, bool binary);
 
     private:
         int dimension;
